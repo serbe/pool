@@ -1,8 +1,8 @@
 package pool
 
 type task struct {
-	id     int
-	url    string
-	result []byte
-	err    error
+	id      int
+	address string
+	result  []byte
+	err     error
 }
