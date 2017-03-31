@@ -19,8 +19,14 @@ type Pool struct {
 	inputJobs    int
 	workChan     chan *task
 	inputChan    chan *task
-	ResultChan   chan []byte
+	ResultChan   chan Result
 	queue        taskList
+}
+
+// Result - struct returned by ResultChan
+type Result struct {
+	Body    []byte
+	Address string
 }
 
 // New - create new pool
@@ -32,7 +38,7 @@ func New(numWorkers int) *Pool {
 	p.inputJobs = 0
 	p.workChan = make(chan *task, numWorkers)
 	p.inputChan = make(chan *task)
-	p.ResultChan = make(chan []byte)
+	p.ResultChan = make(chan Result)
 	for i := 0; i < numWorkers; i++ {
 		go p.worker(i)
 	}
