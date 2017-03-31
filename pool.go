@@ -6,7 +6,8 @@ import (
 )
 
 var (
-	t10ms = time.Duration(10 * time.Millisecond)
+	t10ms   = time.Duration(10 * time.Millisecond)
+	timeout = time.Duration(5 * time.Second)
 )
 
 // Pool - pool of goroutines
@@ -40,9 +41,10 @@ func New(numWorkers int) *Pool {
 }
 
 // Add - add new task to pool
-func (p *Pool) Add(address string) {
+func (p *Pool) Add(address string, proxy string) {
 	t := new(task)
 	t.address = address
+	t.proxy = proxy
 	p.inputJobs++
 	p.inputChan <- t
 }
@@ -84,4 +86,9 @@ func (p *Pool) dec() {
 	p.m.Lock()
 	p.freeWorkers--
 	p.m.Unlock()
+}
+
+// SetTimeout - set http client timeout in second
+func (p *Pool) SetTimeout(t int) {
+	timeout = time.Duration(t) * time.Second
 }
