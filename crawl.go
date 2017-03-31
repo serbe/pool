@@ -5,18 +5,6 @@ import (
 	"net/http"
 )
 
-// type ipType struct {
-// 	Addr        string
-// 	Port        string
-// 	Ssl         bool
-// 	isWork      bool
-// 	isAnon      bool
-// 	ProxyChecks int
-// 	CreateAt    time.Time
-// 	LastCheck   time.Time
-// 	Response    time.Duration
-// }
-
 func crawl(t *task) {
 	t.result, t.err = fetchBody(t.address)
 }
