@@ -56,6 +56,7 @@ func (p *Pool) Add(address string, proxy string) {
 }
 
 func (p *Pool) run() {
+runLoop:
 	for {
 		select {
 		case work := <-p.inputChan:
@@ -69,6 +70,7 @@ func (p *Pool) run() {
 					}
 				} else if p.finishedJobs > 0 && p.finishedJobs == p.inputJobs {
 					close(p.ResultChan)
+					break runLoop
 				}
 			}
 		}
