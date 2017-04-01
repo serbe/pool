@@ -4,18 +4,16 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"time"
 )
 
-func crawl(t *task) {
-	t.result, t.err = fetchBody(t.address, t.proxy)
-}
-
-func fetchBody(targetURL string, proxy string) ([]byte, error) {
+func crawl(t *Task) error {
+	startTime := time.Now()
 	client := &http.Client{
 		Timeout: timeout,
 	}
-	if proxy != "" {
-		proxyURL, err := url.Parse(proxy)
+	if t.Proxy != "" {
+		proxyURL, err := url.Parse(t.Proxy)
 		if err == nil {
 			client.Transport = &http.Transport{
 				Proxy:             http.ProxyURL(proxyURL),
@@ -23,14 +21,18 @@ func fetchBody(targetURL string, proxy string) ([]byte, error) {
 			}
 		}
 	}
-	resp, err := client.Get(targetURL)
+	resp, err := client.Get(t.Address)
 	if err != nil {
-		return nil, err
+		t.Error = err
+		return err
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		return nil, err
+		t.Error = err
+		return err
 	}
-	return body, err
+	t.Body = body
+	t.ResponceTime = time.Now().Sub(startTime)
+	return err
 }

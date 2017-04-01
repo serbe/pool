@@ -17,16 +17,10 @@ type Pool struct {
 	freeWorkers  int
 	finishedJobs int
 	inputJobs    int
-	workChan     chan *task
-	inputChan    chan *task
-	ResultChan   chan Result
+	workChan     chan *Task
+	inputChan    chan *Task
+	ResultChan   chan Task
 	queue        taskList
-}
-
-// Result - struct returned by ResultChan
-type Result struct {
-	Body    []byte
-	Address string
 }
 
 // New - create new pool
@@ -36,9 +30,9 @@ func New(numWorkers int) *Pool {
 	p.freeWorkers = numWorkers
 	p.finishedJobs = 0
 	p.inputJobs = 0
-	p.workChan = make(chan *task, numWorkers)
-	p.inputChan = make(chan *task)
-	p.ResultChan = make(chan Result)
+	p.workChan = make(chan *Task, numWorkers)
+	p.inputChan = make(chan *Task)
+	p.ResultChan = make(chan Task)
 	for i := 0; i < numWorkers; i++ {
 		go p.worker(i)
 	}
@@ -48,9 +42,9 @@ func New(numWorkers int) *Pool {
 
 // Add - add new task to pool
 func (p *Pool) Add(address string, proxy string) {
-	t := new(task)
-	t.address = address
-	t.proxy = proxy
+	t := new(Task)
+	t.Address = address
+	t.Proxy = proxy
 	p.inputJobs++
 	p.inputChan <- t
 }

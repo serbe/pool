@@ -13,10 +13,10 @@ var (
 type taskList struct {
 	m   sync.RWMutex
 	len int
-	val []*task
+	val []*Task
 }
 
-func (t *taskList) put(task *task) error {
+func (t *taskList) put(task *Task) error {
 	t.m.Lock()
 	defer t.m.Unlock()
 	if task == nil {
@@ -27,10 +27,10 @@ func (t *taskList) put(task *task) error {
 	return nil
 }
 
-func (t *taskList) get() (*task, error) {
+func (t *taskList) get() (*Task, error) {
 	t.m.Lock()
 	defer t.m.Unlock()
-	var task *task
+	var task *Task
 	if t.len > 0 {
 		task = t.val[0]
 		t.len--
