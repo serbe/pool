@@ -1,6 +1,8 @@
 package pool
 
 import (
+	"log"
+	"net/url"
 	"sync"
 	"time"
 )
@@ -41,10 +43,20 @@ func New(numWorkers int) *Pool {
 }
 
 // Add - add new task to pool
-func (p *Pool) Add(address string, proxy string) {
+func (p *Pool) Add(target string, proxy string) {
 	t := new(Task)
-	t.Address = address
-	t.Proxy = proxy
+	targetURL, err := url.Parse(target)
+	if err != nil {
+		log.Println("Error in Pool.Add target", target, err)
+		return
+	}
+	t.Target = targetURL
+	proxyURL, err := url.Parse(proxy)
+	if err != nil {
+		log.Println("Error in Pool.Add proxy", proxy, err)
+		return
+	}
+	t.Proxy = proxyURL
 	p.inputJobs++
 	p.inputChan <- t
 }

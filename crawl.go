@@ -3,7 +3,6 @@ package pool
 import (
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"time"
 )
 
@@ -12,16 +11,13 @@ func crawl(t *Task) error {
 	client := &http.Client{
 		Timeout: timeout,
 	}
-	if t.Proxy != "" {
-		proxyURL, err := url.Parse(t.Proxy)
-		if err == nil {
-			client.Transport = &http.Transport{
-				Proxy:             http.ProxyURL(proxyURL),
-				DisableKeepAlives: true,
-			}
+	if t.Proxy.Host != "" {
+		client.Transport = &http.Transport{
+			Proxy:             http.ProxyURL(t.Proxy),
+			DisableKeepAlives: true,
 		}
 	}
-	resp, err := client.Get(t.Address)
+	resp, err := client.Get(t.Target.String())
 	if err != nil {
 		t.Error = err
 		return err
@@ -33,6 +29,7 @@ func crawl(t *Task) error {
 		return err
 	}
 	t.Body = body
+	t.Response = resp
 	t.ResponceTime = time.Now().Sub(startTime)
 	return err
 }
