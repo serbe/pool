@@ -8,8 +8,8 @@ import (
 )
 
 var (
-	t10ms   = time.Duration(10 * time.Millisecond)
-	timeout = time.Duration(5 * time.Second)
+	t10ms   = time.Duration(10) * time.Millisecond
+	timeout = time.Duration(5) * time.Second
 )
 
 // Pool - pool of goroutines
@@ -66,13 +66,18 @@ runLoop:
 	for {
 		select {
 		case work := <-p.inputChan:
-			p.queue.put(work)
+			err := p.queue.put(work)
+			if err != nil {
+				log.Println("Error in p.queue.put", err)
+			}
 		case <-time.After(t10ms):
 			if p.free() > 0 {
 				if p.queue.length() > 0 {
 					work, err := p.queue.get()
 					if err == nil {
 						p.workChan <- work
+					} else {
+						log.Println("Error in p.queue.get", err)
 					}
 				} else if p.finishedJobs > 0 && p.finishedJobs == p.inputJobs {
 					close(p.ResultChan)
