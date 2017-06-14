@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-func crawl(t *Task) error {
+func crawl(t *Task) {
 	startTime := time.Now()
 	client := &http.Client{
 		Timeout: timeout,
@@ -20,20 +20,20 @@ func crawl(t *Task) error {
 	resp, err := client.Get(t.Target.String())
 	if err != nil {
 		t.Error = err
-		return err
+		return
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Error = err
-		return err
+		return
 	}
 	err = resp.Body.Close()
 	if err != nil {
 		t.Error = err
-		return err
+		return
 	}
 	t.Body = body
 	t.Response = resp
 	t.ResponceTime = time.Since(startTime)
-	return err
+	return
 }
