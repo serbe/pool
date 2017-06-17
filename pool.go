@@ -19,6 +19,7 @@ type Pool struct {
 	freeWorkers  int
 	finishedJobs int
 	inputJobs    int
+	startTime    time.Time
 	workChan     chan *Task
 	inputChan    chan *Task
 	ResultChan   chan Task
@@ -32,6 +33,7 @@ func New(numWorkers int) *Pool {
 	p.freeWorkers = numWorkers
 	p.finishedJobs = 0
 	p.inputJobs = 0
+	p.startTime = time.Now()
 	p.workChan = make(chan *Task, numWorkers)
 	p.inputChan = make(chan *Task)
 	p.ResultChan = make(chan Task)
@@ -47,13 +49,13 @@ func (p *Pool) Add(target string, proxy string) {
 	t := new(Task)
 	targetURL, err := url.Parse(target)
 	if err != nil {
-		log.Println("Error in Pool.Add target", target, err)
+		log.Println("Error in Add Parse target", target, err)
 		return
 	}
 	t.Target = targetURL
 	proxyURL, err := url.Parse(proxy)
 	if err != nil {
-		log.Println("Error in Pool.Add proxy", proxy, err)
+		log.Println("Error in Add Parse proxy", proxy, err)
 		return
 	}
 	t.Proxy = proxyURL
@@ -80,8 +82,10 @@ runLoop:
 						log.Println("Error in p.queue.get", err)
 					}
 				} else if p.finishedJobs > 0 && p.finishedJobs == p.inputJobs {
-					close(p.ResultChan)
-					break runLoop
+					if p.inputJobs == 1 && time.Since(p.startTime) > timeout || p.inputJobs != 1 {
+						close(p.ResultChan)
+						break runLoop
+					}
 				}
 			}
 		}

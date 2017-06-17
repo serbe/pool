@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"context"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -17,7 +18,15 @@ func crawl(t *Task) {
 			DisableKeepAlives: true,
 		}
 	}
-	resp, err := client.Get(t.Target.String())
+	req, err := http.NewRequest("GET", t.Target.String(), nil)
+	if err != nil {
+		t.Error = err
+		return
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	req.WithContext(ctx)
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Error = err
 		return
