@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"log"
 	"net/url"
 	"sync"
 	"time"
@@ -45,22 +44,23 @@ func New(numWorkers int) *Pool {
 }
 
 // Add - add new task to pool
-func (p *Pool) Add(target string, proxy string) {
+func (p *Pool) Add(target string, proxy string) error {
 	t := new(Task)
 	targetURL, err := url.Parse(target)
 	if err != nil {
-		log.Println("Error in Add Parse target", target, err)
-		return
+		// log.Println("Error in Add Parse target", target, err)
+		return err
 	}
 	t.Target = targetURL
 	proxyURL, err := url.Parse(proxy)
 	if err != nil {
-		log.Println("Error in Add Parse proxy", proxy, err)
-		return
+		// log.Println("Error in Add Parse proxy", proxy, err)
+		return err
 	}
 	t.Proxy = proxyURL
 	p.inputJobs++
 	p.inputChan <- t
+	return nil
 }
 
 func (p *Pool) run() {
@@ -68,19 +68,19 @@ runLoop:
 	for {
 		select {
 		case work := <-p.inputChan:
-			err := p.queue.put(work)
-			if err != nil {
-				log.Println("Error in p.queue.put", err)
-			}
+			_ = p.queue.put(work)
+			// if err != nil {
+			// log.Println("Error in p.queue.put", err)
+			// }
 		case <-time.After(t10ms):
 			if p.free() > 0 {
 				if p.queue.length() > 0 {
-					work, err := p.queue.get()
-					if err == nil {
-						p.workChan <- work
-					} else {
-						log.Println("Error in p.queue.get", err)
-					}
+					work, _ := p.queue.get()
+					// if err == nil {
+					p.workChan <- work
+					// } else {
+					// log.Println("Error in p.queue.get", err)
+					// }
 				} else if p.finishedJobs > 0 && p.finishedJobs == p.inputJobs {
 					if p.inputJobs == 1 && time.Since(p.startTime) > timeout || p.inputJobs != 1 {
 						close(p.ResultChan)
