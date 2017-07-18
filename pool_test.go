@@ -7,18 +7,10 @@ import (
 )
 
 func Test_Pool(t *testing.T) {
-	// ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	// 	fmt.Fprintln(w, "test")
-	// }))
-	// defer ts.Close()
-
 	pool := New(2)
 	if pool.numWorkers != 2 {
 		t.Errorf("Expected %v, got %v", 2, pool.numWorkers)
 	}
-	// if pool.free() != 2 {
-	// 	t.Errorf("Expected %v, got %v", 2, pool.free())
-	// }
 	err := pool.Add("", "1:")
 	if err == nil {
 		t.Errorf("Expected %v, got %v", err, nil)
@@ -34,17 +26,19 @@ func Test_Pool(t *testing.T) {
 	if pool.inputJobs != 1 {
 		t.Errorf("Expected %v, got %v", 1, pool.inputJobs)
 	}
-	pool.SetTimeout(10)
+	pool.SetHTTPTimeout(10)
 	if timeout != time.Duration(10)*time.Second {
 		t.Errorf("Expected %v, got %v", time.Duration(10)*time.Second, timeout)
 	}
-	err = pool.Add("https://ya.ru/", "127.0.0.1")
+	err = pool.Add("https://ya.ru/", "http://bing.com/search?q=dotnet")
 	if err != nil {
 		t.Errorf("Expected %v, got %v", nil, err)
 	}
 	if pool.inputJobs != 2 {
 		t.Errorf("Expected %v, got %v", 2, pool.inputJobs)
 	}
+
+	pool.SetTaskTimeout(1)
 
 	for result := range pool.ResultChan {
 		log.Println(result.ID)

@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"log"
 	"net/url"
 	"sync"
 	"time"
@@ -18,6 +19,7 @@ type Pool struct {
 	freeWorkers  int
 	finishedJobs int
 	inputJobs    int
+	quitTimeout  time.Duration
 	startTime    time.Time
 	workChan     chan *Task
 	inputChan    chan *Task
@@ -25,6 +27,7 @@ type Pool struct {
 	quitChan     chan bool
 	endTaskChan  chan bool
 	queue        taskList
+	timer        *time.Timer
 }
 
 // New - create new pool
@@ -52,13 +55,11 @@ func (p *Pool) Add(target string, proxy string) error {
 	t := new(Task)
 	targetURL, err := url.Parse(target)
 	if err != nil {
-		// log.Println("Error in Add Parse target", target, err)
 		return err
 	}
 	t.Target = targetURL
 	proxyURL, err := url.Parse(proxy)
 	if err != nil {
-		// log.Println("Error in Add Parse proxy", proxy, err)
 		return err
 	}
 	t.Proxy = proxyURL
@@ -73,36 +74,27 @@ runLoop:
 		case work := <-p.inputChan:
 			_ = p.queue.put(work)
 			p.popTask()
-			// if err != nil {
-			// log.Println("Error in p.queue.put", err)
-			// }
 		case <-p.endTaskChan:
 			p.popTask()
-		// case <-time.After(t10ms):
-		// 	p.popTask()
 		case <-p.quitChan:
 			close(p.ResultChan)
 			break runLoop
-			// if p.free() > 0 {
-			// 	if p.queue.length() > 0 {
-			// 		work, _ := p.queue.get()
-			// 		// if err == nil {
-			// 		p.workChan <- work
-			// 		// } else {
-			// 		// log.Println("Error in p.queue.get", err)
-			// 		// }
-			// 	} else if p.finishedJobs > 0 && p.finishedJobs == p.inputJobs {
-			// 		if p.inputJobs == 1 && time.Since(p.startTime) > timeout || p.inputJobs != 1 {
-			// 			close(p.ResultChan)
-			// 			break runLoop
-			// 		}
-			// 	}
-			// }
 		}
 	}
 }
 
-// SetTimeout - set http client timeout in second
-func (p *Pool) SetTimeout(t int) {
+// SetHTTPTimeout - set http client timeout in second
+func (p *Pool) SetHTTPTimeout(t int) {
 	timeout = time.Duration(t) * time.Second
+}
+
+// SetTaskTimeout - set task timeout in second before send quit signal
+func (p *Pool) SetTaskTimeout(t int) {
+	p.quitTimeout = time.Duration(t) * time.Second
+	p.timer = time.NewTimer(p.quitTimeout)
+	go func() {
+		<-p.timer.C
+		p.quitChan <- true
+		log.Println("End with timeout")
+	}()
 }
