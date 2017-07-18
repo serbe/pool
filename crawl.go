@@ -8,6 +8,7 @@ import (
 )
 
 func crawl(t *Task) {
+	// time.Sleep(time.Duration(1) * time.Second)
 	startTime := time.Now()
 	client := &http.Client{
 		Timeout: timeout,

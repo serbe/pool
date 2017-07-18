@@ -22,6 +22,8 @@ type Pool struct {
 	workChan     chan *Task
 	inputChan    chan *Task
 	ResultChan   chan Task
+	quitChan     chan bool
+	endTaskChan  chan bool
 	queue        taskList
 }
 
@@ -36,6 +38,8 @@ func New(numWorkers int) *Pool {
 	p.workChan = make(chan *Task, numWorkers)
 	p.inputChan = make(chan *Task)
 	p.ResultChan = make(chan Task)
+	p.endTaskChan = make(chan bool, numWorkers)
+	p.quitChan = make(chan bool)
 	for i := 0; i < numWorkers; i++ {
 		go p.worker(i)
 	}
@@ -58,8 +62,7 @@ func (p *Pool) Add(target string, proxy string) error {
 		return err
 	}
 	t.Proxy = proxyURL
-	p.inputJobs++
-	p.inputChan <- t
+	p.pushTask(t)
 	return nil
 }
 
@@ -69,46 +72,34 @@ runLoop:
 		select {
 		case work := <-p.inputChan:
 			_ = p.queue.put(work)
+			p.popTask()
 			// if err != nil {
 			// log.Println("Error in p.queue.put", err)
 			// }
-		case <-time.After(t10ms):
-			if p.free() > 0 {
-				if p.queue.length() > 0 {
-					work, _ := p.queue.get()
-					// if err == nil {
-					p.workChan <- work
-					// } else {
-					// log.Println("Error in p.queue.get", err)
-					// }
-				} else if p.finishedJobs > 0 && p.finishedJobs == p.inputJobs {
-					if p.inputJobs == 1 && time.Since(p.startTime) > timeout || p.inputJobs != 1 {
-						close(p.ResultChan)
-						break runLoop
-					}
-				}
-			}
+		case <-p.endTaskChan:
+			p.popTask()
+		// case <-time.After(t10ms):
+		// 	p.popTask()
+		case <-p.quitChan:
+			close(p.ResultChan)
+			break runLoop
+			// if p.free() > 0 {
+			// 	if p.queue.length() > 0 {
+			// 		work, _ := p.queue.get()
+			// 		// if err == nil {
+			// 		p.workChan <- work
+			// 		// } else {
+			// 		// log.Println("Error in p.queue.get", err)
+			// 		// }
+			// 	} else if p.finishedJobs > 0 && p.finishedJobs == p.inputJobs {
+			// 		if p.inputJobs == 1 && time.Since(p.startTime) > timeout || p.inputJobs != 1 {
+			// 			close(p.ResultChan)
+			// 			break runLoop
+			// 		}
+			// 	}
+			// }
 		}
 	}
-}
-
-func (p *Pool) free() int {
-	p.m.RLock()
-	defer p.m.RUnlock()
-	return p.freeWorkers
-}
-
-func (p *Pool) inc() {
-	p.m.Lock()
-	p.freeWorkers++
-	p.finishedJobs++
-	p.m.Unlock()
-}
-
-func (p *Pool) dec() {
-	p.m.Lock()
-	p.freeWorkers--
-	p.m.Unlock()
 }
 
 // SetTimeout - set http client timeout in second
