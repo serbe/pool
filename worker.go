@@ -1,18 +1,19 @@
 package pool
 
 import (
-	"log"
+	"time"
 )
 
 func (p *Pool) worker(id int) {
 	for task := range p.workChan {
-		log.Println("Start task ", id)
 		p.dec()
-		task.ID = id
+		task.WorkerID = id
 		crawl(task)
 		p.ResultChan <- *task
 		p.inc()
 		p.endTaskChan <- true
-		log.Println("Finish task ", id)
+		if p.quitTimeout > 0 {
+			p.timer = time.NewTimer(p.quitTimeout)
+		}
 	}
 }
