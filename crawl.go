@@ -25,7 +25,7 @@ func crawl(t *Task) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	req.WithContext(ctx)
+	req = req.WithContext(ctx)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Error = err
@@ -44,5 +44,4 @@ func crawl(t *Task) {
 	t.Body = body
 	t.Response = resp
 	t.ResponceTime = time.Since(startTime)
-	return
 }

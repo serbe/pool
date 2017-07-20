@@ -1,8 +1,6 @@
 package pool
 
-import (
-	"time"
-)
+import "time"
 
 func (p *Pool) worker(id int) {
 	for task := range p.workChan {
@@ -12,7 +10,7 @@ func (p *Pool) worker(id int) {
 		p.ResultChan <- *task
 		p.inc()
 		p.endTaskChan <- true
-		if p.quitTimeout > 0 {
+		if p.timerIsRunning {
 			p.timer = time.NewTimer(p.quitTimeout)
 		}
 	}

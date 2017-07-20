@@ -34,7 +34,7 @@ func (p *Pool) popTask() {
 func (p *Pool) inc() {
 	p.m.Lock()
 	p.freeWorkers++
-	p.finishedJobs++
+	// p.finishedJobs++
 	p.m.Unlock()
 }
 
