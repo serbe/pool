@@ -52,18 +52,14 @@ func New(numWorkers int) *Pool {
 }
 
 // Add - add new task to pool
-func (p *Pool) Add(target string, proxy string) error {
+func (p *Pool) Add(target string, proxy *url.URL) error {
 	t := new(Task)
 	targetURL, err := url.Parse(target)
 	if err != nil {
 		return err
 	}
 	t.Target = targetURL
-	proxyURL, err := url.Parse(proxy)
-	if err != nil {
-		return err
-	}
-	t.Proxy = proxyURL
+	t.Proxy = proxy
 	p.pushTask(t)
 	return nil
 }
