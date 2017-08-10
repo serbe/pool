@@ -7,15 +7,10 @@ import (
 	"time"
 )
 
-var (
-	// t10ms   = time.Duration(10) * time.Millisecond
-	timeout = time.Duration(5) * time.Second
-)
+var timeout = time.Duration(5) * time.Second
 
 // Pool - pool of goroutines
 type Pool struct {
-	// finishedJobs int
-	// startTime   time.Time
 	m              sync.RWMutex
 	timerIsRunning bool
 	numWorkers     int
@@ -33,8 +28,6 @@ type Pool struct {
 
 // New - create new pool
 func New(numWorkers int) *Pool {
-	// p.finishedJobs = 0
-	// p.startTime = time.Now()
 	p := new(Pool)
 	p.numWorkers = numWorkers
 	p.freeWorkers = numWorkers
@@ -52,16 +45,11 @@ func New(numWorkers int) *Pool {
 }
 
 // Add - add new task to pool
-func (p *Pool) Add(target string, proxy *url.URL) error {
+func (p *Pool) Add(hostname string, proxy *url.URL) {
 	t := new(Task)
-	targetURL, err := url.Parse(target)
-	if err != nil {
-		return err
-	}
-	t.Target = targetURL
+	t.Hostname = hostname
 	t.Proxy = proxy
 	p.pushTask(t)
-	return nil
 }
 
 func (p *Pool) run() {
@@ -75,6 +63,7 @@ runLoop:
 			p.popTask()
 		case <-p.quitChan:
 			close(p.ResultChan)
+			close(p.workChan)
 			break runLoop
 		}
 	}

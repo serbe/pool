@@ -10,7 +10,7 @@ import (
 type Task struct {
 	ID           int
 	WorkerID     int
-	Target       *url.URL
+	Hostname     string
 	Proxy        *url.URL
 	Response     *http.Response
 	Body         []byte
@@ -34,7 +34,6 @@ func (p *Pool) popTask() {
 func (p *Pool) inc() {
 	p.m.Lock()
 	p.freeWorkers++
-	// p.finishedJobs++
 	p.m.Unlock()
 }
 

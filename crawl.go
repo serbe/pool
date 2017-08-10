@@ -18,7 +18,7 @@ func crawl(t *Task) {
 			DisableKeepAlives: true,
 		}
 	}
-	req, err := http.NewRequest("GET", t.Target.String(), nil)
+	req, err := http.NewRequest("GET", t.Hostname, nil)
 	if err != nil {
 		t.Error = err
 		return
