@@ -19,13 +19,13 @@ func Test_List(t *testing.T) {
 	if length != 1 {
 		t.Errorf("Expected %v, got %v", 1, length)
 	}
-	_, err = list.get()
-	if err != nil {
-		t.Errorf("Expected %v, got %v", nil, err)
+	_, ok := list.get()
+	if !ok {
+		t.Errorf("Expected %v, got %v", true, err)
 	}
-	_, err = list.get()
-	if err != errEmptyTaskList {
-		t.Errorf("Expected %v, got %v", errEmptyTaskList, err)
+	_, ok = list.get()
+	if ok {
+		t.Errorf("Expected %v, got %v", false, err)
 	}
 	length = list.length()
 	if length != 0 {

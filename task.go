@@ -18,16 +18,12 @@ type Task struct {
 	Error        error
 }
 
-func (p *Pool) pushTask(t *Task) {
-	p.inputJobs++
-	t.ID = p.inputJobs
-	p.inputChan <- t
-}
-
 func (p *Pool) popTask() {
-	if p.freeWorkers > 0 && p.queue.length() > 0 {
-		work, _ := p.queue.get()
-		p.workChan <- work
+	if p.freeWorkers > 0 {
+		task, ok := p.queue.get()
+		if ok {
+			p.workChan <- task
+		}
 	}
 }
 

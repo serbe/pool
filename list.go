@@ -6,8 +6,8 @@ import (
 )
 
 var (
-	errEmptyTaskList = errors.New("task list is empty")
-	errNilTask       = errors.New("task is nil")
+	// errEmptyTaskList = errors.New("task list is empty")
+	errNilTask = errors.New("task is nil")
 )
 
 type taskList struct {
@@ -18,30 +18,34 @@ type taskList struct {
 
 func (t *taskList) put(task *Task) error {
 	t.m.Lock()
-	defer t.m.Unlock()
+
 	if task == nil {
+		t.m.Unlock()
 		return errNilTask
 	}
 	t.val = append(t.val, task)
 	t.len++
+	t.m.Unlock()
 	return nil
 }
 
-func (t *taskList) get() (*Task, error) {
+func (t *taskList) get() (*Task, bool) {
 	t.m.Lock()
-	defer t.m.Unlock()
 	var task *Task
 	if t.len > 0 {
 		task = t.val[0]
 		t.len--
 		t.val = t.val[1:]
-		return task, nil
+		t.m.Unlock()
+		return task, true
 	}
-	return nil, errEmptyTaskList
+	t.m.Unlock()
+	return nil, false
 }
 
 func (t *taskList) length() int {
 	t.m.RLock()
-	defer t.m.RUnlock()
-	return t.len
+	len := t.len
+	t.m.RUnlock()
+	return len
 }

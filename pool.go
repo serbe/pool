@@ -32,10 +32,10 @@ func New(numWorkers int) *Pool {
 	p.numWorkers = numWorkers
 	p.freeWorkers = numWorkers
 	p.inputJobs = 0
-	p.workChan = make(chan *Task, numWorkers)
+	p.workChan = make(chan *Task, numWorkers+1)
 	p.inputChan = make(chan *Task)
 	p.ResultChan = make(chan Task)
-	p.endTaskChan = make(chan bool, numWorkers)
+	p.endTaskChan = make(chan bool, numWorkers+1)
 	p.quitChan = make(chan bool)
 	for i := 0; i < numWorkers; i++ {
 		go p.worker(i)
@@ -49,7 +49,11 @@ func (p *Pool) Add(hostname string, proxy *url.URL) {
 	t := new(Task)
 	t.Hostname = hostname
 	t.Proxy = proxy
-	p.pushTask(t)
+	p.inputJobs++
+	t.ID = p.inputJobs
+	log.Println("try to pushtask", t.Hostname)
+	p.inputChan <- t
+	log.Println("sucess pushtask", t.Hostname)
 }
 
 func (p *Pool) run() {
