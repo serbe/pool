@@ -16,15 +16,11 @@ type taskList struct {
 	val []Task
 }
 
-func (t *taskList) put(task Task) error {
-	if task.Hostname == "" {
-		return errNilTask
-	}
+func (t *taskList) put(task Task) {
 	t.m.Lock()
 	t.val = append(t.val, task)
 	t.len++
 	t.m.Unlock()
-	return nil
 }
 
 func (t *taskList) get() (Task, bool) {
@@ -41,9 +37,9 @@ func (t *taskList) get() (Task, bool) {
 	return task, false
 }
 
-func (t *taskList) length() int {
-	t.m.RLock()
-	len := t.len
-	t.m.RUnlock()
-	return len
-}
+// func (t *taskList) length() int {
+// 	t.m.RLock()
+// 	len := t.len
+// 	t.m.RUnlock()
+// 	return len
+// }

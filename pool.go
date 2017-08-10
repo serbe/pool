@@ -18,12 +18,12 @@ type Pool struct {
 	inputJobs      int
 	quitTimeout    time.Duration
 	workChan       chan Task
-	inputChan      chan Task
-	ResultChan     chan Task
-	quitChan       chan bool
-	endTaskChan    chan bool
-	queue          taskList
-	timer          *time.Timer
+	// inputChan      chan Task
+	ResultChan  chan Task
+	quitChan    chan bool
+	endTaskChan chan bool
+	queue       taskList
+	timer       *time.Timer
 }
 
 // New - create new pool
@@ -33,7 +33,7 @@ func New(numWorkers int) *Pool {
 	p.freeWorkers = numWorkers
 	p.inputJobs = 0
 	p.workChan = make(chan Task)
-	p.inputChan = make(chan Task)
+	// p.inputChan = make(chan Task)
 	p.ResultChan = make(chan Task)
 	p.endTaskChan = make(chan bool)
 	p.quitChan = make(chan bool)
@@ -45,27 +45,27 @@ func New(numWorkers int) *Pool {
 }
 
 // Add - add new task to pool
-func (p *Pool) Add(hostname string, proxy *url.URL) {
+func (p *Pool) Add(hostname string, proxy *url.URL) error {
+	if hostname == "" {
+		return errNilTask
+	}
 	t := Task{}
 	t.Hostname = hostname
 	t.Proxy = proxy
 	p.inputJobs++
 	t.ID = p.inputJobs
-	log.Println("try to pushtask", t.ID)
-	p.inputChan <- t
-	log.Println("sucess pushtask", t.ID)
+	log.Println("try to queue.put", t.ID)
+	p.queue.put(t)
+	log.Println("end queue.put, poptask", t.ID)
+	p.popTask()
+	log.Println("end poptask", t.ID)
+	return nil
 }
 
 func (p *Pool) run() {
 runLoop:
 	for {
 		select {
-		case task := <-p.inputChan:
-			log.Println("try to queue.put", task.ID)
-			_ = p.queue.put(task)
-			log.Println("end queue.put, poptask", task.ID)
-			p.popTask()
-			log.Println("end poptask")
 		case <-p.endTaskChan:
 			p.popTask()
 		case <-p.quitChan:
