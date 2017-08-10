@@ -51,9 +51,9 @@ func (p *Pool) Add(hostname string, proxy *url.URL) {
 	t.Proxy = proxy
 	p.inputJobs++
 	t.ID = p.inputJobs
-	log.Println("try to pushtask", t.Hostname)
+	log.Println("try to pushtask", t.ID)
 	p.inputChan <- t
-	log.Println("sucess pushtask", t.Hostname)
+	log.Println("sucess pushtask", t.ID)
 }
 
 func (p *Pool) run() {
@@ -61,9 +61,9 @@ runLoop:
 	for {
 		select {
 		case task := <-p.inputChan:
-			log.Println("try to queue.put", task.Hostname)
+			log.Println("try to queue.put", task.ID)
 			_ = p.queue.put(task)
-			log.Println("end pushtask, poptask", task.Hostname)
+			log.Println("end queue.put, poptask", task.ID)
 			p.popTask()
 			log.Println("end poptask")
 		case <-p.endTaskChan:
