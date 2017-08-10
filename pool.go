@@ -60,9 +60,12 @@ func (p *Pool) run() {
 runLoop:
 	for {
 		select {
-		case work := <-p.inputChan:
-			_ = p.queue.put(work)
+		case task := <-p.inputChan:
+			log.Println("try to queue.put", task.Hostname)
+			_ = p.queue.put(task)
+			log.Println("end pushtask, poptask", task.Hostname)
 			p.popTask()
+			log.Println("end poptask")
 		case <-p.endTaskChan:
 			p.popTask()
 		case <-p.quitChan:
