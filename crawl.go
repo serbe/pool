@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func crawl(t *Task) {
+func crawl(t Task) {
 	startTime := time.Now()
 	client := &http.Client{
 		Timeout: timeout,

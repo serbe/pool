@@ -8,7 +8,7 @@ func (p *Pool) worker(id int) {
 		p.dec()
 		task.WorkerID = id
 		crawl(task)
-		p.ResultChan <- *task
+		p.ResultChan <- task
 		p.inc()
 		p.endTaskChan <- true
 		if p.timerIsRunning && p.freeWorkers == p.numWorkers {

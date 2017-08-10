@@ -17,8 +17,8 @@ type Pool struct {
 	freeWorkers    int
 	inputJobs      int
 	quitTimeout    time.Duration
-	workChan       chan *Task
-	inputChan      chan *Task
+	workChan       chan Task
+	inputChan      chan Task
 	ResultChan     chan Task
 	quitChan       chan bool
 	endTaskChan    chan bool
@@ -32,21 +32,21 @@ func New(numWorkers int) *Pool {
 	p.numWorkers = numWorkers
 	p.freeWorkers = numWorkers
 	p.inputJobs = 0
-	p.workChan = make(chan *Task, numWorkers+1)
-	p.inputChan = make(chan *Task)
+	p.workChan = make(chan Task)
+	p.inputChan = make(chan Task)
 	p.ResultChan = make(chan Task)
-	p.endTaskChan = make(chan bool, numWorkers+1)
+	p.endTaskChan = make(chan bool)
 	p.quitChan = make(chan bool)
+	go p.run()
 	for i := 0; i < numWorkers; i++ {
 		go p.worker(i)
 	}
-	go p.run()
 	return p
 }
 
 // Add - add new task to pool
 func (p *Pool) Add(hostname string, proxy *url.URL) {
-	t := new(Task)
+	t := Task{}
 	t.Hostname = hostname
 	t.Proxy = proxy
 	p.inputJobs++

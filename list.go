@@ -13,25 +13,23 @@ var (
 type taskList struct {
 	m   sync.RWMutex
 	len int
-	val []*Task
+	val []Task
 }
 
-func (t *taskList) put(task *Task) error {
-	t.m.Lock()
-
-	if task == nil {
-		t.m.Unlock()
+func (t *taskList) put(task Task) error {
+	if task.Hostname == "" {
 		return errNilTask
 	}
+	t.m.Lock()
 	t.val = append(t.val, task)
 	t.len++
 	t.m.Unlock()
 	return nil
 }
 
-func (t *taskList) get() (*Task, bool) {
+func (t *taskList) get() (Task, bool) {
 	t.m.Lock()
-	var task *Task
+	var task Task
 	if t.len > 0 {
 		task = t.val[0]
 		t.len--
@@ -40,7 +38,7 @@ func (t *taskList) get() (*Task, bool) {
 		return task, true
 	}
 	t.m.Unlock()
-	return nil, false
+	return task, false
 }
 
 func (t *taskList) length() int {

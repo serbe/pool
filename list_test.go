@@ -6,12 +6,8 @@ import (
 
 func Test_List(t *testing.T) {
 	var list = new(taskList)
-	var task = new(Task)
+	var task Task
 	err := list.put(task)
-	if err != nil {
-		t.Errorf("Expected %v, got %v", nil, err)
-	}
-	err = list.put(nil)
 	if err != errNilTask {
 		t.Errorf("Expected %v, got %v", errNilTask, err)
 	}
