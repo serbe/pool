@@ -1,13 +1,15 @@
 package pool
 
 import (
+	"errors"
 	"net/url"
 	"time"
 )
 
 var (
-	timeout = time.Duration(5) * time.Second
-	t50ms   = time.Duration(50) * time.Millisecond
+	timeout    = time.Duration(5) * time.Second
+	t50ms      = time.Duration(50) * time.Millisecond
+	errNilTask = errors.New("task is nil")
 )
 
 // Pool - pool of goroutines
@@ -16,13 +18,13 @@ type Pool struct {
 	numWorkers     int
 	freeWorkers    int
 	inputJobs      int
-	quitTimeout    time.Duration
 	workChan       chan Task
 	inputTaskChan  chan Task
 	ResultChan     chan Task
 	quit           chan bool
 	endTaskChan    chan bool
 	queue          taskList
+	quitTimeout    time.Duration
 	timer          *time.Timer
 }
 
@@ -36,10 +38,8 @@ func New(numWorkers int) *Pool {
 	p.ResultChan = make(chan Task)
 	p.endTaskChan = make(chan bool)
 	p.quit = make(chan bool)
-	go p.run()
-	for i := 0; i < numWorkers; i++ {
-		go p.worker(i)
-	}
+	go p.runBroker()
+	go p.runWorkers()
 	return p
 }
 
@@ -56,7 +56,7 @@ func (p *Pool) Add(hostname string, proxy *url.URL) error {
 	return nil
 }
 
-func (p *Pool) run() {
+func (p *Pool) runBroker() {
 loopPool:
 	for {
 		select {
@@ -109,7 +109,6 @@ func (p *Pool) SetTaskTimeout(t int) {
 	go func() {
 		<-p.timer.C
 		p.quit <- true
-		// log.Println("End with timeout")
 	}()
 }
 

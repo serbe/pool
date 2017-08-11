@@ -8,3 +8,9 @@ func (p *Pool) worker(id int) {
 		p.endTaskChan <- true
 	}
 }
+
+func (p *Pool) runWorkers() {
+	for i := 0; i < p.numWorkers; i++ {
+		go p.worker(i)
+	}
+}
