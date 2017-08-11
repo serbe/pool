@@ -1,9 +1,7 @@
 package pool
 
 import (
-	"log"
 	"net/url"
-	"sync"
 	"time"
 )
 
@@ -14,7 +12,6 @@ var (
 
 // Pool - pool of goroutines
 type Pool struct {
-	m              sync.RWMutex
 	timerIsRunning bool
 	numWorkers     int
 	freeWorkers    int
@@ -60,6 +57,7 @@ func (p *Pool) Add(hostname string, proxy *url.URL) error {
 }
 
 func (p *Pool) run() {
+loopPool:
 	for {
 		select {
 		case task := <-p.inputTaskChan:
@@ -76,14 +74,13 @@ func (p *Pool) run() {
 			}
 		case <-p.endTaskChan:
 			p.freeWorkers++
-			log.Println(p.timerIsRunning, p.freeWorkers, p.numWorkers)
 			if p.timerIsRunning && p.freeWorkers == p.numWorkers {
 				p.timer.Reset(p.quitTimeout)
 			}
 		case <-p.quit:
 			close(p.ResultChan)
 			close(p.workChan)
-			break
+			break loopPool
 		case <-time.After(t50ms):
 			if p.freeWorkers > 0 {
 				task, ok := p.queue.get()
