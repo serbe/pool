@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func crawl(t Task) {
+func crawl(t Task) Task {
 	startTime := time.Now()
 	client := &http.Client{
 		Timeout: timeout,
@@ -21,7 +21,7 @@ func crawl(t Task) {
 	req, err := http.NewRequest("GET", t.Hostname, nil)
 	if err != nil {
 		t.Error = err
-		return
+		return t
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -29,19 +29,20 @@ func crawl(t Task) {
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Error = err
-		return
+		return t
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Error = err
-		return
+		return t
 	}
 	err = resp.Body.Close()
 	if err != nil {
 		t.Error = err
-		return
+		return t
 	}
 	t.Body = body
 	t.Response = resp
 	t.ResponceTime = time.Since(startTime)
+	return t
 }
