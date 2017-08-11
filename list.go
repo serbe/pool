@@ -11,7 +11,7 @@ var (
 )
 
 type taskList struct {
-	m   sync.RWMutex
+	m   sync.Mutex
 	len int
 	val []Task
 }
@@ -36,10 +36,3 @@ func (t *taskList) get() (Task, bool) {
 	t.m.Unlock()
 	return task, false
 }
-
-// func (t *taskList) length() int {
-// 	t.m.RLock()
-// 	len := t.len
-// 	t.m.RUnlock()
-// 	return len
-// }
