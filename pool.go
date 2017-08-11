@@ -7,7 +7,10 @@ import (
 	"time"
 )
 
-var timeout = time.Duration(5) * time.Second
+var (
+	timeout = time.Duration(5) * time.Second
+	t50ms   = time.Duration(50) * time.Millisecond
+)
 
 // Pool - pool of goroutines
 type Pool struct {
@@ -18,12 +21,12 @@ type Pool struct {
 	inputJobs      int
 	quitTimeout    time.Duration
 	workChan       chan Task
-	// inputChan      chan Task
-	ResultChan  chan Task
-	quitChan    chan bool
-	endTaskChan chan bool
-	queue       taskList
-	timer       *time.Timer
+	inputTaskChan  chan Task
+	ResultChan     chan Task
+	quit           chan bool
+	endTaskChan    chan bool
+	queue          taskList
+	timer          *time.Timer
 }
 
 // New - create new pool
@@ -31,12 +34,11 @@ func New(numWorkers int) *Pool {
 	p := new(Pool)
 	p.numWorkers = numWorkers
 	p.freeWorkers = numWorkers
-	p.inputJobs = 0
 	p.workChan = make(chan Task)
-	// p.inputChan = make(chan Task)
+	p.inputTaskChan = make(chan Task)
 	p.ResultChan = make(chan Task)
 	p.endTaskChan = make(chan bool)
-	p.quitChan = make(chan bool)
+	p.quit = make(chan bool)
 	go p.run()
 	for i := 0; i < numWorkers; i++ {
 		go p.worker(i)
@@ -49,29 +51,50 @@ func (p *Pool) Add(hostname string, proxy *url.URL) error {
 	if hostname == "" {
 		return errNilTask
 	}
-	t := Task{}
-	t.Hostname = hostname
-	t.Proxy = proxy
-	p.inputJobs++
-	t.ID = p.inputJobs
-	log.Println("try to queue.put", t.ID)
-	p.queue.put(t)
-	log.Println("end queue.put, poptask", t.ID)
-	p.popTask()
-	log.Println("end poptask", t.ID)
+	task := Task{
+		Hostname: hostname,
+		Proxy:    proxy,
+	}
+	p.inputTaskChan <- task
 	return nil
 }
 
 func (p *Pool) run() {
-runLoop:
 	for {
 		select {
+		case task := <-p.inputTaskChan:
+			p.inputJobs++
+			task.ID = p.inputJobs
+			if p.freeWorkers > 0 {
+				if p.timerIsRunning {
+					p.timer.Stop()
+				}
+				p.freeWorkers--
+				p.workChan <- task
+			} else {
+				p.queue.put(task)
+			}
 		case <-p.endTaskChan:
-			p.popTask()
-		case <-p.quitChan:
+			p.freeWorkers++
+			log.Println(p.timerIsRunning, p.freeWorkers, p.numWorkers)
+			if p.timerIsRunning && p.freeWorkers == p.numWorkers {
+				p.timer.Reset(p.quitTimeout)
+			}
+		case <-p.quit:
 			close(p.ResultChan)
 			close(p.workChan)
-			break runLoop
+			break
+		case <-time.After(t50ms):
+			if p.freeWorkers > 0 {
+				task, ok := p.queue.get()
+				if ok {
+					if p.timerIsRunning {
+						p.timer.Stop()
+					}
+					p.freeWorkers--
+					p.workChan <- task
+				}
+			}
 		}
 	}
 }
@@ -88,12 +111,12 @@ func (p *Pool) SetTaskTimeout(t int) {
 	p.timerIsRunning = true
 	go func() {
 		<-p.timer.C
-		p.quitChan <- true
-		log.Println("End with timeout")
+		p.quit <- true
+		// log.Println("End with timeout")
 	}()
 }
 
 // Quit - send quit signal to pool
 func (p *Pool) Quit() {
-	p.quitChan <- true
+	p.quit <- true
 }

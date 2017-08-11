@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"log"
 	"net/http"
 	"net/url"
 	"time"
@@ -19,18 +18,17 @@ type Task struct {
 	Error        error
 }
 
-func (p *Pool) popTask() {
-	if p.freeWorkers > 0 {
-		log.Println("poptask p.freeWorkers > 0, try p.queue.get")
-		task, ok := p.queue.get()
-		log.Println("poptask sucess p.queue.get", task.ID, task.Hostname)
-		if ok {
-			log.Println("poptask ok, try p.workChan <- task", task.ID, task.Hostname)
-			p.workChan <- task
-			log.Println("poptask sucess p.workChan <- task")
-		}
-	}
-}
+// func (p *Pool) popTask() {
+// 	if p.freeWorkers > 0 {
+// 		task, ok := p.queue.get()
+// 		log.Println("poptask sucess p.queue.get", task.ID, task.Hostname)
+// 		if ok {
+// 			log.Println("poptask ok, try p.workChan <- task", task.ID, task.Hostname)
+// 			p.workChan <- task
+// 			log.Println("poptask sucess p.workChan <- task")
+// 		}
+// 	}
+// }
 
 func (p *Pool) inc() {
 	p.m.Lock()
