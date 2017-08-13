@@ -63,35 +63,18 @@ loopPool:
 		case task := <-p.inputTaskChan:
 			p.inputJobs++
 			task.ID = p.inputJobs
-			if p.freeWorkers > 0 {
-				if p.timerIsRunning {
-					p.timer.Stop()
-				}
-				p.freeWorkers--
-				p.workChan <- task
-			} else {
-				p.queue.put(task)
-			}
+			p.addTask(task)
 		case <-p.endTaskChan:
 			p.freeWorkers++
 			if p.timerIsRunning && p.freeWorkers == p.numWorkers {
 				p.timer.Reset(p.quitTimeout)
 			}
 		case <-p.quit:
-			close(p.ResultChan)
 			close(p.workChan)
+			close(p.ResultChan)
 			break loopPool
 		case <-time.After(t50ms):
-			if p.freeWorkers > 0 {
-				task, ok := p.queue.get()
-				if ok {
-					if p.timerIsRunning {
-						p.timer.Stop()
-					}
-					p.freeWorkers--
-					p.workChan <- task
-				}
-			}
+			p.tryGetTask()
 		}
 	}
 }
@@ -115,4 +98,29 @@ func (p *Pool) SetTaskTimeout(t int) {
 // Quit - send quit signal to pool
 func (p *Pool) Quit() {
 	p.quit <- true
+}
+
+func (p *Pool) addTask(task Task) {
+	if p.freeWorkers > 0 {
+		if p.timerIsRunning {
+			p.timer.Stop()
+		}
+		p.freeWorkers--
+		p.workChan <- task
+	} else {
+		p.queue.put(task)
+	}
+}
+
+func (p *Pool) tryGetTask() {
+	if p.freeWorkers > 0 {
+		task, ok := p.queue.get()
+		if ok {
+			if p.timerIsRunning {
+				p.timer.Stop()
+			}
+			p.freeWorkers--
+			p.workChan <- task
+		}
+	}
 }
