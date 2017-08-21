@@ -5,7 +5,7 @@ import (
 )
 
 type taskList struct {
-	m    sync.Mutex
+	m    sync.RWMutex
 	list []Task
 }
 
@@ -26,4 +26,11 @@ func (t *taskList) get() (Task, bool) {
 	}
 	t.m.Unlock()
 	return task, false
+}
+
+func (t *taskList) length() int {
+	t.m.RLock()
+	length := len(t.list)
+	t.m.RUnlock()
+	return length
 }

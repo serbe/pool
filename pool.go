@@ -3,6 +3,7 @@ package pool
 import (
 	"errors"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -14,6 +15,7 @@ var (
 
 // Pool - pool of goroutines
 type Pool struct {
+	m              sync.RWMutex
 	timerIsRunning bool
 	numWorkers     int
 	freeWorkers    int
@@ -48,6 +50,10 @@ func (p *Pool) Add(hostname string, proxy *url.URL) error {
 	if hostname == "" {
 		return errNilTask
 	}
+	_, err := url.Parse(hostname)
+	if err != nil {
+		return err
+	}
 	task := Task{
 		Hostname: hostname,
 		Proxy:    proxy,
@@ -61,12 +67,12 @@ loopPool:
 	for {
 		select {
 		case task := <-p.inputTaskChan:
-			p.inputJobs++
-			task.ID = p.inputJobs
+			p.incJobs()
+			task.ID = p.getJobs()
 			p.addTask(task)
 		case <-p.endTaskChan:
-			p.freeWorkers++
-			if p.timerIsRunning && p.freeWorkers == p.numWorkers {
+			p.incWorkers()
+			if p.timerIsRunning && p.getFreeWorkers() == p.numWorkers {
 				p.timer.Reset(p.quitTimeout)
 			}
 		case <-p.quit:
@@ -101,11 +107,11 @@ func (p *Pool) Quit() {
 }
 
 func (p *Pool) addTask(task Task) {
-	if p.freeWorkers > 0 {
+	if p.getFreeWorkers() > 0 {
 		if p.timerIsRunning {
 			p.timer.Stop()
 		}
-		p.freeWorkers--
+		p.decWorkers()
 		p.workChan <- task
 	} else {
 		p.queue.put(task)
@@ -119,8 +125,40 @@ func (p *Pool) tryGetTask() {
 			if p.timerIsRunning {
 				p.timer.Stop()
 			}
-			p.freeWorkers--
+			p.decWorkers()
 			p.workChan <- task
 		}
 	}
+}
+
+func (p *Pool) getFreeWorkers() int {
+	p.m.RLock()
+	freeWorkers := p.freeWorkers
+	p.m.RUnlock()
+	return freeWorkers
+}
+
+func (p *Pool) incWorkers() {
+	p.m.Lock()
+	p.freeWorkers++
+	p.m.Unlock()
+}
+
+func (p *Pool) decWorkers() {
+	p.m.Lock()
+	p.freeWorkers--
+	p.m.Unlock()
+}
+
+func (p *Pool) getJobs() int {
+	p.m.RLock()
+	inputJobs := p.inputJobs
+	p.m.RUnlock()
+	return inputJobs
+}
+
+func (p *Pool) incJobs() {
+	p.m.Lock()
+	p.inputJobs++
+	p.m.Unlock()
 }
