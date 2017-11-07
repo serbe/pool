@@ -15,7 +15,7 @@ var (
 
 // Pool - pool of goroutines
 type Pool struct {
-	m              sync.RWMutex
+	sync.RWMutex
 	timerIsRunning bool
 	numWorkers     int
 	freeWorkers    int
@@ -132,33 +132,33 @@ func (p *Pool) tryGetTask() {
 }
 
 func (p *Pool) getFreeWorkers() int {
-	p.m.RLock()
+	p.RLock()
 	freeWorkers := p.freeWorkers
-	p.m.RUnlock()
+	p.RUnlock()
 	return freeWorkers
 }
 
 func (p *Pool) incWorkers() {
-	p.m.Lock()
+	p.Lock()
 	p.freeWorkers++
-	p.m.Unlock()
+	p.Unlock()
 }
 
 func (p *Pool) decWorkers() {
-	p.m.Lock()
+	p.Lock()
 	p.freeWorkers--
-	p.m.Unlock()
+	p.Unlock()
 }
 
 func (p *Pool) getJobs() int {
-	p.m.RLock()
+	p.RLock()
 	inputJobs := p.inputJobs
-	p.m.RUnlock()
+	p.RUnlock()
 	return inputJobs
 }
 
 func (p *Pool) incJobs() {
-	p.m.Lock()
+	p.Lock()
 	p.inputJobs++
-	p.m.Unlock()
+	p.Unlock()
 }
