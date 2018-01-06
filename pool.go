@@ -75,6 +75,7 @@ loopPool:
 			if p.timerIsRunning && p.getFreeWorkers() == p.numWorkers {
 				p.timer.Reset(p.quitTimeout)
 			}
+			p.tryGetTask()
 		case <-p.quit:
 			close(p.workChan)
 			close(p.ResultChan)
