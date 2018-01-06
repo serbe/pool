@@ -3,7 +3,7 @@ package pool
 import (
 	"errors"
 	"net/url"
-	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -15,11 +15,10 @@ var (
 
 // Pool - pool of goroutines
 type Pool struct {
-	sync.RWMutex
 	timerIsRunning bool
-	numWorkers     int
-	freeWorkers    int
-	inputJobs      int
+	numWorkers     int64
+	freeWorkers    int64
+	inputJobs      int64
 	workChan       chan Task
 	inputTaskChan  chan Task
 	ResultChan     chan Task
@@ -31,7 +30,7 @@ type Pool struct {
 }
 
 // New - create new pool
-func New(numWorkers int) *Pool {
+func New(numWorkers int64) *Pool {
 	p := new(Pool)
 	p.numWorkers = numWorkers
 	p.freeWorkers = numWorkers
@@ -132,34 +131,10 @@ func (p *Pool) tryGetTask() {
 	}
 }
 
-func (p *Pool) getFreeWorkers() int {
-	p.RLock()
-	freeWorkers := p.freeWorkers
-	p.RUnlock()
-	return freeWorkers
-}
-
-func (p *Pool) incWorkers() {
-	p.Lock()
-	p.freeWorkers++
-	p.Unlock()
-}
-
-func (p *Pool) decWorkers() {
-	p.Lock()
-	p.freeWorkers--
-	p.Unlock()
-}
-
-func (p *Pool) getJobs() int {
-	p.RLock()
-	inputJobs := p.inputJobs
-	p.RUnlock()
-	return inputJobs
+func (p *Pool) getJobs() int64 {
+	return atomic.LoadInt64(&p.inputJobs)
 }
 
 func (p *Pool) incJobs() {
-	p.Lock()
-	p.inputJobs++
-	p.Unlock()
+	atomic.AddInt64(&p.inputJobs, 1)
 }

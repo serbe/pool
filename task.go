@@ -8,8 +8,8 @@ import (
 
 // Task - structure describing a task
 type Task struct {
-	ID           int
-	WorkerID     int
+	ID           int64
+	WorkerID     int64
 	Hostname     string
 	Proxy        *url.URL
 	Response     *http.Response
