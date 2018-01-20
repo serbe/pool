@@ -30,10 +30,10 @@ type Pool struct {
 }
 
 // New - create new pool
-func New(numWorkers int64) *Pool {
+func New(numWorkers int) *Pool {
 	p := new(Pool)
-	p.numWorkers = numWorkers
-	p.freeWorkers = numWorkers
+	p.numWorkers = int64(numWorkers)
+	p.freeWorkers = p.numWorkers
 	p.workChan = make(chan Task)
 	p.inputTaskChan = make(chan Task)
 	p.ResultChan = make(chan Task)
