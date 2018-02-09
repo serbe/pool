@@ -108,15 +108,16 @@ func (p *Pool) crawl(t *Task) *Task {
 		t.Error = err
 		return t
 	}
-	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Error = err
+		_ = resp.Body.Close()
 		return t
 	}
 	t.Body = body
-	t.Response = resp
+	// t.Response = resp
 	t.ResponceTime = time.Since(startTime)
+	_ = resp.Body.Close()
 	return t
 }
 

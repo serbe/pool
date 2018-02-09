@@ -191,6 +191,7 @@ func TestWaitingTasks(t *testing.T) {
 func BenchmarkAccumulate(b *testing.B) {
 	ts := httptest.NewServer(http.HandlerFunc(testHandler))
 	defer ts.Close()
+	b.ResetTimer()
 
 	p := New(numWorkers)
 	n := b.N
@@ -212,9 +213,9 @@ func BenchmarkAccumulate(b *testing.B) {
 func BenchmarkParallel(b *testing.B) {
 	ts := httptest.NewServer(http.HandlerFunc(testHandler))
 	defer ts.Close()
+	b.ResetTimer()
 
 	p := New(numWorkers)
-	b.ResetTimer()
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			err := p.Add(ts.URL, nil)
