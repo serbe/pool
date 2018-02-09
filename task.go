@@ -108,12 +108,8 @@ func (p *Pool) crawl(t *Task) *Task {
 		t.Error = err
 		return t
 	}
+	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error = err
-		return t
-	}
-	err = resp.Body.Close()
 	if err != nil {
 		t.Error = err
 		return t
