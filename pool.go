@@ -25,17 +25,17 @@ type Pool struct {
 	timer          *time.Timer
 }
 
-// New - create new gorourine pool with channels
+// New - create new goroutine pool with channels
 // numWorkers - max workers
 func New(numWorkers int64) *Pool {
 	p := new(Pool)
 	p.numWorkers = numWorkers
 	p.freeWorkers = numWorkers
 	p.workChan = make(chan *Task)
-	p.inputTaskChan = make(chan *Task)
-	p.ResultChan = make(chan *Task)
-	p.endTaskChan = make(chan bool)
-	p.quit = make(chan bool)
+	p.inputTaskChan = make(chan *Task, 1)
+	p.ResultChan = make(chan *Task, 1)
+	p.endTaskChan = make(chan bool, 1)
+	p.quit = make(chan bool, 1)
 	p.queue = new(taskQueue)
 	p.timeout = time.Duration(10) * time.Second
 	go p.runBroker()

@@ -39,6 +39,21 @@ func TestQueue(t *testing.T) {
 	}
 }
 
+// func TestClosedInputTaskChan(t *testing.T) {
+// 	ts := httptest.NewServer(http.HandlerFunc(testHandlerWithTimeout))
+// 	defer ts.Close()
+
+// 	p := New(1)
+// 	p.SetTimeout(100)
+// 	_ = p.Add(ts.URL, nil)
+// 	// close(p.inputTaskChan)
+// 	err := p.Add(ts.URL, nil)
+// 	if err == nil {
+// 		t.Errorf("Got %v error, want %v", nil, "error")
+// 	}
+// 	log.Println(err)
+// }
+
 func TestNoServer(t *testing.T) {
 	p := New(numWorkers)
 	if p.numWorkers != numWorkers {
@@ -227,10 +242,10 @@ func BenchmarkParallel(b *testing.B) {
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
 			task := <-p.ResultChan
-			err := task.Error
-			if err != nil {
-				b.Error("Error", err)
-			}
+			_ = task.Error
+			// if err != nil {
+			// 	b.Error("Error", err)
+			// }
 		}
 	})
 }

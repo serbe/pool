@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"context"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -100,9 +99,9 @@ func (p *Pool) crawl(t *Task) *Task {
 		t.Error = err
 		return t
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
-	defer cancel()
-	req = req.WithContext(ctx)
+	// ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
+	// defer cancel()
+	// req = req.WithContext(ctx)
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Error = err
