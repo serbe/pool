@@ -2,12 +2,9 @@ package pool
 
 import (
 	"errors"
-	"net/http"
 	"net/url"
 	"sync/atomic"
 	"time"
-
-	"github.com/headzoo/surf/browser"
 )
 
 var (
@@ -22,11 +19,10 @@ type Task struct {
 	WorkerID     int64
 	Hostname     string
 	Body         []byte
-	Browser      *browser.Browser
 	Proxy        *url.URL
-	Response     *http.Response
 	ResponceTime time.Duration
 	Error        error
+	// Response     *http.Response
 }
 
 // Add - add new task to pool

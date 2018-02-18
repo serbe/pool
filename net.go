@@ -4,8 +4,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"github.com/headzoo/surf"
 )
 
 func (p *Pool) crawl(t *Task) *Task {
@@ -24,9 +22,10 @@ func (p *Pool) crawl(t *Task) *Task {
 		t.Error = err
 		return t
 	}
-	// ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
-	// defer cancel()
-	// req = req.WithContext(ctx)
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:58.0) Gecko/20100101 Firefox/58.0")
+	req.Header.Set("Connection", "close")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Referer", "https://www.google.com/")
 	resp, err := client.Do(req)
 	if err != nil {
 		t.Error = err
@@ -35,26 +34,12 @@ func (p *Pool) crawl(t *Task) *Task {
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		t.Error = err
-		_ = resp.Body.Close()
+		resp.Body.Close()
 		return t
 	}
 	t.Body = body
-	t.Response = resp
+	// t.Response = resp
 	t.ResponceTime = time.Since(startTime)
-	_ = resp.Body.Close()
-	return t
-}
-
-func (p *Pool) surfCrawl(t *Task) *Task {
-	startTime := time.Now()
-	bow := surf.NewBrowser()
-	err := bow.Open(t.Hostname)
-	if err != nil {
-		t.Error = err
-		return t
-	}
-	// t.Response = bow.ResponseHeaders()
-	t.ResponceTime = time.Since(startTime)
-	t.Browser = bow
+	resp.Body.Close()
 	return t
 }
