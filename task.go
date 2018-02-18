@@ -2,11 +2,12 @@ package pool
 
 import (
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sync/atomic"
 	"time"
+
+	"github.com/headzoo/surf/browser"
 )
 
 var (
@@ -21,6 +22,7 @@ type Task struct {
 	WorkerID     int64
 	Hostname     string
 	Body         []byte
+	Browser      *browser.Browser
 	Proxy        *url.URL
 	Response     *http.Response
 	ResponceTime time.Duration
@@ -81,43 +83,6 @@ func (p *Pool) SetQuitTimeout(t int64) {
 		<-p.timer.C
 		p.quit <- true
 	}()
-}
-
-func (p *Pool) crawl(t *Task) *Task {
-	startTime := time.Now()
-	client := &http.Client{
-		Timeout: p.timeout,
-	}
-	if t.Proxy != nil {
-		client.Transport = &http.Transport{
-			Proxy:             http.ProxyURL(t.Proxy),
-			DisableKeepAlives: true,
-		}
-	}
-	req, err := http.NewRequest("GET", t.Hostname, nil)
-	if err != nil {
-		t.Error = err
-		return t
-	}
-	// ctx, cancel := context.WithTimeout(context.Background(), p.timeout)
-	// defer cancel()
-	// req = req.WithContext(ctx)
-	resp, err := client.Do(req)
-	if err != nil {
-		t.Error = err
-		return t
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		t.Error = err
-		_ = resp.Body.Close()
-		return t
-	}
-	t.Body = body
-	t.Response = resp
-	t.ResponceTime = time.Since(startTime)
-	_ = resp.Body.Close()
-	return t
 }
 
 // GetAddedTasks - get num of added tasks
