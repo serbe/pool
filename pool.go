@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Pool - specification of gopool
+// Pool - specification of golang pool
 type Pool struct {
 	useQuitTimeout bool
 	waitingTasks   uint32
@@ -50,7 +50,6 @@ loopPool:
 	for {
 		select {
 		case task := <-p.inputTaskChan:
-			p.incAddedTasks()
 			task.ID = p.GetAddedTasks()
 			p.addTask(task)
 		case <-p.endTaskChan:
@@ -67,15 +66,15 @@ loopPool:
 // Quit - send quit signal to pool
 func (p *Pool) Quit() {
 	atomic.StoreUint32(&p.runningPool, 0)
-	p.quit <- true
 	p.EndWaitingTasks()
+	p.quit <- true
 }
 
 func (p *Pool) poolIsRunning() bool {
 	return atomic.LoadUint32(&p.runningPool) != 0
 }
 
-// EndWaitingTasks - set end pool waiting tasks
+// EndWaitingTasks - stop pool waiting tasks
 func (p *Pool) EndWaitingTasks() {
 	atomic.StoreUint32(&p.waitingTasks, 0)
 }

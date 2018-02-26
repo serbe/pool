@@ -44,6 +44,7 @@ func (p *Pool) Add(hostname string, proxy *url.URL) error {
 		Hostname: hostname,
 		Proxy:    proxy,
 	}
+	p.incAddedTasks()
 	p.inputTaskChan <- task
 	return nil
 }
