@@ -117,6 +117,9 @@ func TestWithServer(t *testing.T) {
 	if err != errNotWait {
 		t.Errorf("Got %v error, want %v", err, errNotWait)
 	}
+	if p.GetCompletedTasks() == 0 {
+		t.Errorf("Got %v error, want %v", 0, 1)
+	}
 	if !p.isCompleteJobs() {
 		t.Errorf("Got %v error, want %v", false, true)
 	}
