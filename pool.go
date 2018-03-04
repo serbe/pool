@@ -56,6 +56,8 @@ loopPool:
 			p.incWorkers()
 			p.tryGetTask()
 		case <-p.quit:
+			atomic.StoreUint32(&p.runningPool, 0)
+			p.EndWaitingTasks()
 			close(p.workChan)
 			close(p.ResultChan)
 			break loopPool

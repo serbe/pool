@@ -39,20 +39,19 @@ func TestQueue(t *testing.T) {
 	}
 }
 
-// func TestClosedInputTaskChan(t *testing.T) {
-// 	ts := httptest.NewServer(http.HandlerFunc(testHandlerWithTimeout))
-// 	defer ts.Close()
+func TestClosedInputTaskChanByTimeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
 
-// 	p := New(1)
-// 	p.SetTimeout(100)
-// 	_ = p.Add(ts.URL, nil)
-// 	// close(p.inputTaskChan)
-// 	err := p.Add(ts.URL, nil)
-// 	if err == nil {
-// 		t.Errorf("Got %v error, want %v", nil, "error")
-// 	}
-// 	log.Println(err)
-// }
+	p := New(2)
+	p.SetQuitTimeout(10)
+	p.Add(ts.URL, nil)
+	time.Sleep(time.Duration(30) * time.Millisecond)
+	err := p.Add(ts.URL, nil)
+	if err == nil {
+		t.Errorf("Got %v error, want %v", nil, errNotRun)
+	}
+}
 
 func TestNoServer(t *testing.T) {
 	p := New(numWorkers)

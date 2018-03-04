@@ -1,6 +1,8 @@
 package pool
 
-import "sync/atomic"
+import (
+	"sync/atomic"
+)
 
 func (p *Pool) worker(id int64) {
 	for task := range p.workChan {
