@@ -20,7 +20,7 @@ type Task struct {
 	Hostname     string
 	Body         []byte
 	Proxy        *url.URL
-	ResponceTime time.Duration
+	ResponseTime time.Duration
 	Error        error
 	// Response     *http.Response
 }

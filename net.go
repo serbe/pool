@@ -39,7 +39,7 @@ func (p *Pool) crawl(t *Task) *Task {
 	}
 	t.Body = body
 	// t.Response = resp
-	t.ResponceTime = time.Since(startTime)
+	t.ResponseTime = time.Since(startTime)
 	resp.Body.Close()
 	return t
 }

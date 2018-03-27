@@ -14,11 +14,11 @@ var (
 	t10ms            = time.Duration(10) * time.Millisecond
 )
 
-func testHandler(w http.ResponseWriter, r *http.Request) {
+func testHandler(w http.ResponseWriter, _ *http.Request) {
 	fmt.Fprint(w, "Test page")
 }
 
-func testHandlerWithTimeout(w http.ResponseWriter, r *http.Request) {
+func testHandlerWithTimeout(w http.ResponseWriter, _ *http.Request) {
 	time.Sleep(t10ms)
 	fmt.Fprint(w, "Test page with timeout")
 }
