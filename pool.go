@@ -14,8 +14,8 @@ type Pool struct {
 	freeWorkers    int64
 	addedTasks     int64
 	completedTasks int64
-	quit           chan bool
-	endTaskChan    chan bool
+	quit           chan struct{}
+	endTaskChan    chan struct{}
 	workChan       chan *Task
 	inputTaskChan  chan *Task
 	ResultChan     chan *Task
@@ -34,8 +34,8 @@ func New(numWorkers int64) *Pool {
 	p.workChan = make(chan *Task)
 	p.inputTaskChan = make(chan *Task, 1)
 	p.ResultChan = make(chan *Task, 1)
-	p.endTaskChan = make(chan bool, 1)
-	p.quit = make(chan bool, 1)
+	p.endTaskChan = make(chan struct{}, 1)
+	p.quit = make(chan struct{}, 1)
 	p.queue = new(taskQueue)
 	p.timeout = time.Duration(10) * time.Second
 	go p.runBroker()
@@ -69,7 +69,7 @@ loopPool:
 func (p *Pool) Quit() {
 	atomic.StoreUint32(&p.runningPool, 0)
 	p.EndWaitingTasks()
-	p.quit <- true
+	p.quit <- struct{}{}
 }
 
 func (p *Pool) poolIsRunning() bool {

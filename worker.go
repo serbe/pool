@@ -13,11 +13,11 @@ func (p *Pool) worker(id int64) {
 		task = p.crawl(task)
 		if p.poolIsRunning() {
 			p.ResultChan <- task
-			p.endTaskChan <- true
+			p.endTaskChan <- struct{}{}
 			p.incCompletedTasks()
 			if !p.poolIsWaitingTasks() && p.GetAddedTasks() == p.GetCompletedTasks() {
 				atomic.StoreUint32(&p.runningPool, 0)
-				p.quit <- true
+				p.quit <- struct{}{}
 				break
 			}
 			if p.useQuitTimeout && p.isCompleteJobs() {

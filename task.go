@@ -78,7 +78,7 @@ func (p *Pool) SetQuitTimeout(t int64) {
 	p.timer = time.NewTimer(p.quitTimeout)
 	go func() {
 		<-p.timer.C
-		p.quit <- true
+		p.quit <- struct{}{}
 	}()
 }
 
