@@ -24,13 +24,13 @@ func testHandlerWithTimeout(w http.ResponseWriter, _ *http.Request) {
 }
 
 func TestQueue(t *testing.T) {
-	queue := new(taskQueue)
+	queue := newRingQueue()
 	testTask := &Task{
 		Hostname: "",
 	}
 	queue.put(testTask)
-	if queue.len != 1 {
-		t.Errorf("Got %v error, want %v", queue.len, 1)
+	if queue.cnt != 1 {
+		t.Errorf("Got %v error, want %v", queue.cnt, 1)
 	}
 	queue.put(testTask)
 	_, ok := queue.get()

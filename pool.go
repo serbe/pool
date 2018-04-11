@@ -19,7 +19,7 @@ type Pool struct {
 	workChan       chan *Task
 	inputTaskChan  chan *Task
 	ResultChan     chan *Task
-	queue          *taskQueue
+	queue          *ringQueue
 	timeout        time.Duration
 	quitTimeout    time.Duration
 	timer          *time.Timer
@@ -36,7 +36,7 @@ func New(numWorkers int64) *Pool {
 	p.ResultChan = make(chan *Task, 1)
 	p.endTaskChan = make(chan struct{}, 1)
 	p.quit = make(chan struct{}, 1)
-	p.queue = new(taskQueue)
+	p.queue = newRingQueue()
 	p.timeout = time.Duration(10) * time.Second
 	go p.runBroker()
 	go p.runWorkers()
