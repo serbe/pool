@@ -17,7 +17,7 @@ func (p *Pool) crawl(t *Task) *Task {
 			DisableKeepAlives: true,
 		}
 	}
-	req, err := http.NewRequest("GET", t.Hostname, nil)
+	req, err := http.NewRequest(http.MethodGet, t.Hostname, nil)
 	if err != nil {
 		t.Error = err
 		return t

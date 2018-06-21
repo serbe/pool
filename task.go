@@ -17,10 +17,10 @@ var (
 type Task struct {
 	ID           int64
 	WorkerID     int64
+	ResponseTime time.Duration
 	Hostname     string
 	Body         []byte
 	Proxy        *url.URL
-	ResponseTime time.Duration
 	Error        error
 	// Response     *http.Response
 }
