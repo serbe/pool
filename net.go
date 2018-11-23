@@ -28,6 +28,9 @@ func (p *Pool) crawl(t *Task) *Task {
 	req.Header.Set("Referer", "https://www.google.com/")
 	resp, err := client.Do(req)
 	if err != nil {
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
 		t.Error = err
 		return t
 	}
