@@ -2,7 +2,6 @@ package pool
 
 import (
 	"errors"
-	"net/url"
 	"sync/atomic"
 	"time"
 )
@@ -15,17 +14,23 @@ var (
 
 // Task - structure describing a task
 type Task struct {
+	ID       int64
+	Hostname string
+	Proxy    string
+}
+
+// TaskResult - structure describing a result task
+type TaskResult struct {
 	ID           int64
-	WorkerID     int64
 	ResponseTime time.Duration
 	Hostname     string
+	Proxy        string
 	Body         []byte
-	Proxy        *url.URL
 	Error        error
 }
 
 // Add - add new task to pool
-func (p *Pool) Add(hostname string, proxy *url.URL) error {
+func (p *Pool) Add(hostname string, proxy string) error {
 	if hostname == "" {
 		return errEmptyTarget
 	}
@@ -34,10 +39,6 @@ func (p *Pool) Add(hostname string, proxy *url.URL) error {
 	}
 	if !p.poolIsWaitingTasks() {
 		return errNotWait
-	}
-	_, err := url.Parse(hostname)
-	if err != nil {
-		return err
 	}
 	task := &Task{
 		Hostname: hostname,
@@ -74,7 +75,7 @@ func (p *Pool) SetTimeout(t int64) {
 func (p *Pool) SetQuitTimeout(t int64) {
 	p.useQuitTimeout = true
 	p.quitTimeout = time.Duration(t) * time.Millisecond
-	p.timer = time.NewTimer(p.quitTimeout)
+	p.timer = *time.NewTimer(p.quitTimeout)
 	go func() {
 		<-p.timer.C
 		p.quit <- struct{}{}

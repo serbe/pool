@@ -3,24 +3,39 @@ package pool
 import (
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 )
 
-func (p *Pool) crawl(t *Task) *Task {
+func (p *Pool) crawl(t *Task) *TaskResult {
 	startTime := time.Now()
+	var proxy *url.URL
+	var err error
+	var task = &TaskResult{
+		ID:       t.ID,
+		Hostname: t.Hostname,
+		Proxy:    t.Proxy,
+	}
+	if t.Proxy != "" {
+		proxy, err = url.Parse(t.Proxy)
+		if err != nil {
+			task.Error = err
+			return task
+		}
+	}
 	client := &http.Client{
 		Timeout: p.timeout,
 	}
-	if t.Proxy != nil {
+	if proxy != nil {
 		client.Transport = &http.Transport{
-			Proxy:             http.ProxyURL(t.Proxy),
+			Proxy:             http.ProxyURL(proxy),
 			DisableKeepAlives: true,
 		}
 	}
 	req, err := http.NewRequest(http.MethodGet, t.Hostname, nil)
 	if err != nil {
-		t.Error = err
-		return t
+		task.Error = err
+		return task
 	}
 	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64; rv:58.0) Gecko/20100101 Firefox/58.0")
 	req.Header.Set("Connection", "close")
@@ -31,23 +46,23 @@ func (p *Pool) crawl(t *Task) *Task {
 		if resp != nil {
 			_ = resp.Body.Close()
 		}
-		t.Error = err
-		return t
+		task.Error = err
+		return task
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		t.Error = err
+		task.Error = err
 		err = resp.Body.Close()
 		if err != nil {
-			t.Error = err
+			task.Error = err
 		}
-		return t
+		return task
 	}
-	t.Body = body
-	t.ResponseTime = time.Since(startTime)
+	task.Body = body
+	task.ResponseTime = time.Since(startTime)
 	err = resp.Body.Close()
 	if err != nil {
-		t.Error = err
+		task.Error = err
 	}
-	return t
+	return task
 }

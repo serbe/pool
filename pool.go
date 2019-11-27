@@ -18,11 +18,11 @@ type Pool struct {
 	endTaskChan    chan struct{}
 	workChan       chan *Task
 	inputTaskChan  chan *Task
-	ResultChan     chan *Task
-	queue          *ringQueue
+	ResultChan     chan *TaskResult
+	queue          ringQueue
 	timeout        time.Duration
 	quitTimeout    time.Duration
-	timer          *time.Timer
+	timer          time.Timer
 }
 
 // New - create new goroutine pool with channels
@@ -33,7 +33,7 @@ func New(numWorkers int64) *Pool {
 	p.freeWorkers = numWorkers
 	p.workChan = make(chan *Task)
 	p.inputTaskChan = make(chan *Task, 1)
-	p.ResultChan = make(chan *Task, 1)
+	p.ResultChan = make(chan *TaskResult, 1)
 	p.endTaskChan = make(chan struct{}, 1)
 	p.quit = make(chan struct{}, 1)
 	p.queue = newRingQueue()

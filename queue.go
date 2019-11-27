@@ -12,8 +12,8 @@ type ringQueue struct {
 	cnt   int
 }
 
-func newRingQueue() *ringQueue {
-	return &ringQueue{
+func newRingQueue() ringQueue {
+	return ringQueue{
 		nodes: make([]*Task, 2),
 	}
 }

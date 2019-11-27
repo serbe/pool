@@ -6,13 +6,12 @@ import (
 
 func (p *Pool) worker(id int64) {
 	for task := range p.workChan {
-		task.WorkerID = id
 		if p.useQuitTimeout {
 			p.timer.Stop()
 		}
-		task = p.crawl(task)
+		taskResult := p.crawl(task)
 		if p.poolIsRunning() {
-			p.ResultChan <- task
+			p.ResultChan <- taskResult
 			p.endTaskChan <- struct{}{}
 			p.incCompletedTasks()
 			if !p.poolIsWaitingTasks() && p.GetAddedTasks() == p.GetCompletedTasks() {
