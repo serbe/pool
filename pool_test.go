@@ -45,9 +45,12 @@ func TestClosedInputTaskChanByTimeout(t *testing.T) {
 
 	p := New(2)
 	p.SetQuitTimeout(10)
-	p.Add(ts.URL, nil)
-	time.Sleep(time.Duration(30) * time.Millisecond)
 	err := p.Add(ts.URL, nil)
+	if err != nil {
+		t.Errorf("Got %v error, want %v", nil, errNotRun)
+	}
+	time.Sleep(time.Duration(30) * time.Millisecond)
+	err = p.Add(ts.URL, nil)
 	if err == nil {
 		t.Errorf("Got %v error, want %v", nil, errNotRun)
 	}
