@@ -22,7 +22,6 @@ type Task struct {
 	Body         []byte
 	Proxy        *url.URL
 	Error        error
-	// Response     *http.Response
 }
 
 // Add - add new task to pool

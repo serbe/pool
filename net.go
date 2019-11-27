@@ -44,7 +44,6 @@ func (p *Pool) crawl(t *Task) *Task {
 		return t
 	}
 	t.Body = body
-	// t.Response = resp
 	t.ResponseTime = time.Since(startTime)
 	err = resp.Body.Close()
 	if err != nil {
