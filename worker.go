@@ -2,7 +2,31 @@ package pool
 
 import (
 	"sync/atomic"
+	"time"
 )
+
+type Worker struct {
+	ID            int
+	WorkerChannel chan chan Task
+	Channel       chan Task
+	Result        chan TaskResult
+	End           chan bool
+	Timeout       time.Duration
+}
+
+func (w *Worker) start() {
+	go func() {
+		for {
+			w.WorkerChannel <- w.Channel // when the worker is available place channel in queue
+			select {
+			case task := <-w.Channel: // worker has received task
+				w.Result <- w.crawl(task)
+			case <-w.End:
+				return
+			}
+		}
+	}()
+}
 
 func (p *Pool) worker(id int64) {
 	for task := range p.workChan {
