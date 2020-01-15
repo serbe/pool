@@ -84,7 +84,7 @@ func (w *Worker) crawl(t Task) TaskResult {
 		}
 	}
 	client := &http.Client{
-		Timeout: w.Timeout,
+		Timeout: w.pool.timeout,
 	}
 	if proxy != nil {
 		client.Transport = &http.Transport{

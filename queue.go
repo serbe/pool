@@ -6,7 +6,7 @@ import (
 
 type ringQueue struct {
 	sync.RWMutex
-	nodes []*Task
+	nodes []Task
 	head  int
 	tail  int
 	cnt   int
@@ -14,12 +14,12 @@ type ringQueue struct {
 
 func newRingQueue() ringQueue {
 	return ringQueue{
-		nodes: make([]*Task, 2),
+		nodes: make([]Task, 2),
 	}
 }
 
 func (q *ringQueue) resize(n int) {
-	nodes := make([]*Task, n)
+	nodes := make([]Task, n)
 	if q.head < q.tail {
 		copy(nodes, q.nodes[q.head:q.tail])
 	} else {
@@ -32,7 +32,7 @@ func (q *ringQueue) resize(n int) {
 	q.nodes = nodes
 }
 
-func (q *ringQueue) put(task *Task) {
+func (q *ringQueue) put(task Task) {
 	q.Lock()
 	if q.cnt == len(q.nodes) {
 		q.resize(q.cnt * 2)
@@ -43,8 +43,8 @@ func (q *ringQueue) put(task *Task) {
 	q.Unlock()
 }
 
-func (q *ringQueue) get() (*Task, bool) {
-	var task *Task
+func (q *ringQueue) get() (Task, bool) {
+	var task Task
 	q.Lock()
 	if q.cnt == 0 {
 		q.Unlock()
