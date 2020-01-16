@@ -1,8 +1,15 @@
 package pool
 
 import (
+	"errors"
 	"sync/atomic"
 	"time"
+)
+
+var (
+	errEmptyTarget = errors.New("error: empty target hostname")
+	errNotRun      = errors.New("error: pool is not running")
+	errNotWait     = errors.New("error: pool is not waiting tasks")
 )
 
 // Task - structure describing a task
@@ -22,42 +29,42 @@ type TaskResult struct {
 	Error        error
 }
 
-// // Add - add new task to pool
-// func (p *Pool) Add(hostname string, proxy string) error {
-// 	if hostname == "" {
-// 		return errEmptyTarget
-// 	}
-// 	if !p.poolIsRunning() {
-// 		return errNotRun
-// 	}
-// 	if !p.poolIsWaitingTasks() {
-// 		return errNotWait
-// 	}
-// 	task := &Task{
-// 		Hostname: hostname,
-// 		Proxy:    proxy,
-// 	}
-// 	p.incAddedTasks()
-// 	p.inputTaskChan <- task
-// 	return nil
-// }
+// Add - add new task to pool
+func (p *Pool) Add(hostname string, proxy string) error {
+	if hostname == "" {
+		return errEmptyTarget
+	}
+	if !p.poolIsRunning() {
+		return errNotRun
+	}
+	if !p.poolIsWaitingTasks() {
+		return errNotWait
+	}
+	task := &Task{
+		Hostname: hostname,
+		Proxy:    proxy,
+	}
+	p.incAddedTasks()
+	p.inputTaskChan <- task
+	return nil
+}
 
-// func (p *Pool) addTask(task *Task) {
-// 	if p.getFreeWorkers() > 0 {
-// 		p.decWorkers()
-// 		p.workChan <- task
-// 	} else {
-// 		p.queue.put(*task)
-// 	}
-// }
+func (p *Pool) addTask(task *Task) {
+	if p.getFreeWorkers() > 0 {
+		p.decWorkers()
+		p.workChan <- task
+	} else {
+		p.queue.put(*task)
+	}
+}
 
-// func (p *Pool) tryGetTask() {
-// 	task, ok := p.queue.get()
-// 	if ok {
-// 		p.decWorkers()
-// 		p.workChan <- &task
-// 	}
-// }
+func (p *Pool) tryGetTask() {
+	task, ok := p.queue.get()
+	if ok {
+		p.decWorkers()
+		p.workChan <- &task
+	}
+}
 
 // SetTimeout - set http timeout in millisecond
 func (p *Pool) SetTimeout(t int64) {
