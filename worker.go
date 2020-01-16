@@ -17,7 +17,7 @@ func (w *Worker) start() {
 			case task := <-w.in:
 				w.out <- w.crawl(task)
 			case <-w.quit:
-				return
+				break
 			}
 		}
 	}()

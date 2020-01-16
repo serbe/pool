@@ -23,21 +23,70 @@ func testHandler(w http.ResponseWriter, _ *http.Request) {
 // 	fmt.Fprint(w, "Test page with timeout")
 // }
 
-func TestClosedInputTaskChanByTimeout(t *testing.T) {
+func TestAddTasks(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(testHandler))
 	defer ts.Close()
 
 	p := New(2)
-	// p.SetQuitTimeout(10)
 	err := p.Add(ts.URL, "")
 	if err != nil {
-		t.Errorf("Got %v error, want %v", err, errNotRun)
+		t.Errorf("Got %v error, want %v", err, nil)
 	}
-	// time.Sleep(t30ms)
+	if p.GetAddedTasks() != 1 {
+		t.Errorf("Got %v added tasks, want %v", p.GetAddedTasks(), 1)
+	}
+	err = p.Add("", "")
+	if err == nil {
+		t.Errorf("Got %v error, want %v", err, errEmptyTarget)
+	}
+	if p.GetAddedTasks() != 1 {
+		t.Errorf("Got %v added tasks, want %v", p.GetAddedTasks(), 1)
+	}
 	err = p.Add(ts.URL, "")
 	if err != nil {
 		t.Errorf("Got %v error, want %v", err, errNotRun)
 	}
+	if p.GetAddedTasks() != 2 {
+		t.Errorf("Got %v added tasks, want %v", p.GetAddedTasks(), 2)
+	}
+}
+
+func TestStartPool(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
+
+	p := New(2)
+	err := p.Run()
+	if err != nil {
+		t.Errorf("Got %v pool run, want %v", err, nil)
+	}
+	err = p.Run()
+	if err == nil {
+		t.Errorf("Got %v pool already run, want %v", err, errIsRun)
+	}
+	if p.runningPool != 1 {
+		t.Errorf("Got %v in running pool, want %v", p.runningPool, 1)
+	}
+	if p.numWorkers != 2 {
+		t.Errorf("Got %v num of workers, want %v", p.numWorkers, 2)
+	}
+}
+
+func TestPool(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
+
+	p := New(2)
+	_ = p.Run()
+
+	err := p.Add(":", "")
+	if err != nil {
+		t.Errorf("Got %v error, want %v", err, nil)
+	}
+	// task := <-p.ResultChan
+	// if task.Error == nil {
+	// 	t.Error("Got nil error, want net error")
+	// }
 }
 
 // func TestNoServer(t *testing.T) {

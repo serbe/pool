@@ -1,15 +1,8 @@
 package pool
 
 import (
-	"errors"
 	"sync/atomic"
 	"time"
-)
-
-var (
-	errEmptyTarget = errors.New("error: empty target hostname")
-	errNotRun      = errors.New("error: pool is not running")
-	errNotWait     = errors.New("error: pool is not waiting tasks")
 )
 
 // Task - structure describing a task

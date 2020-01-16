@@ -1,13 +1,23 @@
 package pool
 
 import (
+	"errors"
 	"log"
+	// "sync"
 	"sync/atomic"
 	"time"
 )
 
+var (
+	errEmptyTarget = errors.New("error: empty target hostname")
+	errNotRun      = errors.New("error: pool is not running")
+	errIsRun       = errors.New("error: pool is already running")
+	errNotWait     = errors.New("error: pool is not waiting tasks")
+)
+
 // Pool - specification of golang pool
 type Pool struct {
+	// mu             *sync.RWMutex
 	useQuitTimeout bool
 	waitingTasks   uint32
 	runningPool    uint32
@@ -53,16 +63,22 @@ func New(numWorkers int64) *Pool {
 		}
 		p.workers[i] = worker
 	}
-	// go p.runBroker()
-	// go p.runWorkers()
-	// p.runningPool = 1
 	p.waitingTasks = 1
 	return p
 }
 
-func (p *Pool) Start() {
-	atomic.StoreUint32(&p.runningPool, 1)
+func (p *Pool) Run() error {
+	if p.runningPool != 0 {
+		return errIsRun
+	}
+	go p.start()
+	time.Sleep(time.Duration(100) * time.Millisecond)
+	return nil
+}
+
+func (p *Pool) start() {
 	// tick := time.Tick(100 * time.Millisecond)
+	atomic.StoreUint32(&p.runningPool, 1)
 	for {
 		select {
 		// case task := <-p.inputTaskChan:
@@ -79,7 +95,7 @@ func (p *Pool) Start() {
 			p.toWorker <- task
 		case <-p.quit:
 			atomic.StoreUint32(&p.runningPool, 0)
-			p.EndWaitingTasks()
+			// p.EndWaitingTasks()
 			var i int64
 			for i = 0; i < p.numWorkers; i++ {
 				p.workers[i].quit <- struct{}{}
@@ -98,34 +114,35 @@ func (p *Pool) Add(hostname string, proxy string) error {
 	// if !p.poolIsRunning() {
 	// 	return errNotRun
 	// }
-	if !p.poolIsWaitingTasks() {
-		return errNotWait
-	}
+	// if !p.poolIsWaitingTasks() {
+	// 	return errNotWait
+	// }
+	p.incAddedTasks()
 	task := Task{
+		ID:       p.addedTasks,
 		Hostname: hostname,
 		Proxy:    proxy,
 	}
-	p.incAddedTasks()
 	p.queue.put(task)
 	return nil
 }
 
-// Quit - send quit signal to pool
-func (p *Pool) Quit() {
-	atomic.StoreUint32(&p.runningPool, 0)
-	p.EndWaitingTasks()
-	p.quit <- struct{}{}
-}
+// // Quit - send quit signal to pool
+// func (p *Pool) Quit() {
+// 	atomic.StoreUint32(&p.runningPool, 0)
+// 	p.EndWaitingTasks()
+// 	p.quit <- struct{}{}
+// }
 
-func (p *Pool) poolIsRunning() bool {
-	return atomic.LoadUint32(&p.runningPool) != 0
-}
+// func (p *Pool) poolIsRunning() bool {
+// 	return atomic.LoadUint32(&p.runningPool) != 0
+// }
 
-// EndWaitingTasks - stop pool waiting tasks
-func (p *Pool) EndWaitingTasks() {
-	atomic.StoreUint32(&p.waitingTasks, 0)
-}
+// // EndWaitingTasks - stop pool waiting tasks
+// func (p *Pool) EndWaitingTasks() {
+// 	atomic.StoreUint32(&p.waitingTasks, 0)
+// }
 
-func (p *Pool) poolIsWaitingTasks() bool {
-	return atomic.LoadUint32(&p.waitingTasks) == 1
-}
+// func (p *Pool) poolIsWaitingTasks() bool {
+// 	return atomic.LoadUint32(&p.waitingTasks) == 1
+// }
