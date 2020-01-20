@@ -7,24 +7,19 @@ import (
 	"time"
 )
 
-func (p *Pool) crawl(t *Task) *TaskResult {
+func crawl(task Task) Task {
 	startTime := time.Now()
 	var proxy *url.URL
 	var err error
-	var task = &TaskResult{
-		ID:       t.ID,
-		Hostname: t.Hostname,
-		Proxy:    t.Proxy,
-	}
-	if t.Proxy != "" {
-		proxy, err = url.Parse(t.Proxy)
+	if task.Proxy != "" {
+		proxy, err = url.Parse(task.Proxy)
 		if err != nil {
 			task.Error = err
 			return task
 		}
 	}
 	client := &http.Client{
-		Timeout: p.timeout,
+		Timeout: time.Duration(timeout) * time.Millisecond,
 	}
 	if proxy != nil {
 		client.Transport = &http.Transport{
@@ -32,7 +27,7 @@ func (p *Pool) crawl(t *Task) *TaskResult {
 			DisableKeepAlives: true,
 		}
 	}
-	req, err := http.NewRequest(http.MethodGet, t.Hostname, nil)
+	req, err := http.NewRequest(http.MethodGet, task.Hostname, nil)
 	if err != nil {
 		task.Error = err
 		return task
