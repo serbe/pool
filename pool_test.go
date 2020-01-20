@@ -58,7 +58,7 @@ func TestNoServer(t *testing.T) {
 	// }
 	err = p.Add(":", "")
 	if err != nil {
-		t.Errorf("Got %v error, want nil error", err)
+		t.Errorf("Got %v error, want %v", err, nil)
 	}
 	// task := <-p.ResultChan
 	// if task.Error == nil {
@@ -66,16 +66,16 @@ func TestNoServer(t *testing.T) {
 	// }
 	err = p.Add("http://127.0.0.1:80/", ":")
 	if err != nil {
-		t.Errorf("Got %v error, want nil error", err)
+		t.Errorf("Got %v error, want %v", err, nil)
 	}
 	// task = <-p.ResultChan
 	// if task.Error == nil {
 	// 	t.Error("Got nil error, want net error")
 	// }
-	// err = p.Add("http://127.0.0.1:80/", "")
-	// if err != nil {
-	// 	t.Errorf("Got %v error, want nil error", err)
-	// }
+	err = p.Add("http://127.0.0.1:80/", "")
+	if err != nil {
+		t.Errorf("Got %v error, want %v", err, nil)
+	}
 	// task = <-p.ResultChan
 	// if task.Error == nil {
 	// 	t.Error("Got nil error, want net error")
@@ -94,7 +94,7 @@ func TestNoServer(t *testing.T) {
 	// if task.Error == nil {
 	// 	t.Error("Got nil error, want net error")
 	// }
-	// p.Quit()
+	p.Stop()
 	// if p.poolIsRunning() {
 	// 	t.Errorf("Got %v error, want false", p.poolIsRunning())
 	// }

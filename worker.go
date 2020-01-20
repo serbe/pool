@@ -1,18 +1,22 @@
 package pool
 
 type worker struct {
-	id   int64
-	in   chan Task
-	out  chan Task
-	quit chan struct{}
+	id      int64
+	running bool
+	in      chan Task
+	out     chan Task
+	quit    chan struct{}
 }
 
 func (w *worker) start() {
+	w.running = true
 	for {
 		select {
 		case task := <-w.in:
 			w.out <- crawl(task)
 		case <-w.quit:
+			close(w.quit)
+			w.running = false
 			break
 		}
 	}

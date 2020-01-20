@@ -9,6 +9,7 @@ var timeout int64
 
 // Pool - specification of golang pool
 type Pool struct {
+	running    bool
 	addedTasks int64
 	in         ringQueue
 	out        ringQueue
@@ -39,6 +40,7 @@ func New(numWorkers int64) *Pool {
 		out:      newRingQueue(),
 		toWork:   make(chan Task, numWorkers),
 		fromWork: make(chan Task, numWorkers),
+		quit:     make(chan struct{}),
 	}
 	for i < numWorkers {
 		worker := worker{
@@ -69,6 +71,7 @@ func New(numWorkers int64) *Pool {
 }
 
 func (p *Pool) start() {
+	p.running = true
 	tick := time.Tick(time.Duration(200) * time.Microsecond)
 	for {
 		select {
@@ -80,6 +83,13 @@ func (p *Pool) start() {
 		case task := <-p.fromWork:
 			log.Println("pool get task", task.ID)
 			p.out.put(task)
+		case <-p.quit:
+			for i := range p.workers {
+				p.workers[i].quit <- struct{}{}
+			}
+			close(p.quit)
+			p.running = false
+			break
 		}
 	}
 	// for {
@@ -124,12 +134,10 @@ func (p *Pool) Get() (Task, bool) {
 	return p.out.get()
 }
 
-// // Quit - send quit signal to pool
-// func (p *Pool) Quit() {
-// 	atomic.StoreUint32(&p.runningPool, 0)
-// 	p.EndWaitingTasks()
-// 	p.quit <- struct{}{}
-// }
+// Stop - stop pool and all workers
+func (p *Pool) Stop() {
+	p.quit <- struct{}{}
+}
 
 // func (p *Pool) poolIsRunning() bool {
 // 	return atomic.LoadUint32(&p.runningPool) != 0
