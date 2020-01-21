@@ -262,3 +262,58 @@ func BenchmarkParallel(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkOutChan(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
+	// b.ResetTimer()
+
+	p := New(numWorkers)
+	ch := p.UseOutChan()
+	n := b.N
+	for i := 0; i < n; i++ {
+		err := p.Add(ts.URL, "")
+		if err != nil {
+			b.Errorf("Got %v error, want %v", err, nil)
+		}
+	}
+	for i := 0; i < n; i++ {
+		task, ok := <-ch
+		if !ok {
+			b.Errorf("Got %v with getting task, want %v", ok, true)
+		}
+		if task.Error != nil {
+			b.Errorf("Task %v have error %v", task.ID, task.Error)
+		}
+	}
+}
+
+func BenchmarkParallelOutChan(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
+	// b.ResetTimer()
+
+	p := New(numWorkers)
+	ch := p.UseOutChan()
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			err := p.Add(ts.URL, "")
+			if err != nil {
+				b.Errorf("Got %v error, want %v", err, nil)
+			}
+		}
+	})
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			select {
+			case task, ok := <-ch:
+				if !ok {
+					b.Errorf("Got %v with getting task, want %v", ok, true)
+				}
+				if task.Error != nil {
+					b.Errorf("Task %v have error %v", task.ID, task.Error)
+				}
+			}
+		}
+	})
+}

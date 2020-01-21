@@ -1,11 +1,17 @@
 package pool
 
 import (
+	"errors"
 	"sync"
 	"time"
 )
 
-var timeout int64
+var (
+	timeout        int64
+	errEmptyTarget = errors.New("error: empty target hostname")
+	errNotRun      = errors.New("error: pool is not running")
+	errNotWait     = errors.New("error: pool is not waiting tasks")
+)
 
 // Pool - specification of golang pool
 type Pool struct {
@@ -91,7 +97,7 @@ func (p *Pool) start() {
 				p.workers[i].stop()
 			}
 			// close(p.quit)
-			break
+			return
 		}
 	}
 }
