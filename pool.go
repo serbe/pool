@@ -145,6 +145,12 @@ func (p *Pool) Wait() {
 	p.taskWG.Wait()
 }
 
-// func (p *Pool) poolIsWaitingTasks() bool {
-// 	return atomic.LoadUint32(&p.waitingTasks) == 1
-// }
+// Added - number of adding tasks
+func (p *Pool) Added() int64 {
+	return p.addedTasks
+}
+
+// Completed - number of completed tasks
+func (p *Pool) Completed() int64 {
+	return p.completedTasks
+}
