@@ -1,7 +1,6 @@
 package pool
 
 import (
-	"math/rand"
 	"sync"
 	"time"
 )
@@ -11,6 +10,7 @@ var timeout int64
 // Pool - specification of golang pool
 type Pool struct {
 	running        bool
+	useOutChan     bool
 	numWorkers     int64
 	addedTasks     int64
 	completedTasks int64
@@ -18,31 +18,24 @@ type Pool struct {
 	out            ringQueue
 	toWork         chan Task
 	fromWork       chan Task
+	outTasks       chan Task
 	quit           chan struct{}
 	workers        []worker
 	wg             sync.WaitGroup
 	taskWG         sync.WaitGroup
-	// numWorkers     int64
-	// useQuitTimeout bool
-	// waitingTasks   uint32
-	// runningPool    uint32
-	// freeWorkers    int64
-	// completedTasks int64
-	// timeout        time.Duration
-	// quitTimeout    time.Duration
-	// timer          time.Timer
 }
 
 // New - create new goroutine pool with channels
 // numWorkers - max workers
 func New(numWorkers int64) *Pool {
-	rand.Seed(time.Now().UnixNano())
+	// rand.Seed(time.Now().UnixNano())
 	p := &Pool{
 		numWorkers: numWorkers,
 		in:         newRingQueue(),
 		out:        newRingQueue(),
 		toWork:     make(chan Task, numWorkers),
 		fromWork:   make(chan Task, numWorkers),
+		outTasks:   make(chan Task, 1),
 		quit:       make(chan struct{}),
 	}
 	p.wg.Add(1)
@@ -85,7 +78,11 @@ func (p *Pool) start() {
 				p.toWork <- task
 			}
 		case task := <-p.fromWork:
-			p.out.put(task)
+			if !p.useOutChan {
+				p.out.put(task)
+			} else {
+				p.outTasks <- task
+			}
 			p.completedTasks++
 			p.taskWG.Done()
 		case <-p.quit:
@@ -153,4 +150,15 @@ func (p *Pool) Added() int64 {
 // Completed - number of completed tasks
 func (p *Pool) Completed() int64 {
 	return p.completedTasks
+}
+
+// UseOutChan - use chan to get results
+func (p *Pool) UseOutChan() chan Task {
+	p.useOutChan = true
+	return p.outTasks
+}
+
+// IsUseOutChan - get status of use chan to get results
+func (p *Pool) IsUseOutChan() bool {
+	return p.useOutChan
 }

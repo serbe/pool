@@ -76,6 +76,9 @@ func TestNoServer(t *testing.T) {
 	if p.addedTasks != 3 {
 		t.Errorf("Wrong input jobs. got %v, want %v", p.addedTasks, 3)
 	}
+	if p.addedTasks != p.Added() {
+		t.Errorf("Wrong input jobs. got %v, want %v", p.addedTasks, p.Added())
+	}
 	p.Stop()
 	if p.IsRunning() {
 		t.Errorf("pool is %v, want %v", p.IsRunning(), false)
@@ -121,6 +124,9 @@ func TestWithServer(t *testing.T) {
 	if p.completedTasks != 2 {
 		t.Errorf("Got %v error, want %v", p.completedTasks, 2)
 	}
+	if p.completedTasks != p.Completed() {
+		t.Errorf("Got %v error, want %v", p.completedTasks, p.Completed())
+	}
 	p.Stop()
 }
 
@@ -158,19 +164,28 @@ func TestWithTimeout(t *testing.T) {
 	p.Stop()
 }
 
-// func TestQuitTimeout(t *testing.T) {
-// 	ts := httptest.NewServer(http.HandlerFunc(testHandlerWithTimeout))
-// 	defer ts.Close()
+func TestOutChan(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
 
-// 	p := New(1)
-// 	p.SetTimeout(30)
-// 	p.SetQuitTimeout(2)
-// 	_ = p.Add(ts.URL, "")
-// 	_ = p.Add(ts.URL, "")
-// 	if p.GetCompletedTasks() != 0 {
-// 		t.Errorf("Got %v error, want %v", p.GetCompletedTasks(), 0)
-// 	}
-// }
+	p := New(numWorkers)
+	if p.IsUseOutChan() {
+		t.Errorf("Got %v on use out chan, want %v", p.IsUseOutChan(), false)
+	}
+	ch := p.UseOutChan()
+	if !p.IsUseOutChan() {
+		t.Errorf("Got %v on use out chan, want %v", p.IsUseOutChan(), true)
+	}
+	_ = p.Add(ts.URL, "")
+	task := <-ch
+	if string(task.Body) != "Test page" {
+		t.Errorf("Got %v in task.Body, want '%v'", string(task.Body), "Test page")
+	}
+	if p.Completed() != 1 {
+		t.Errorf("Got %v completed tasks, want %v", p.Completed(), 1)
+	}
+	p.Stop()
+}
 
 // func TestWaitingTasks(t *testing.T) {
 // 	ts := httptest.NewServer(http.HandlerFunc(testHandler))
