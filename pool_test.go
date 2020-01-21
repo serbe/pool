@@ -3,6 +3,7 @@ package pool
 import (
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
@@ -18,12 +19,8 @@ func testHandler(w http.ResponseWriter, _ *http.Request) {
 }
 
 func testHandlerWithTimeout(w http.ResponseWriter, _ *http.Request) {
-	time.Sleep(t10ms)
+	time.Sleep(t30ms)
 	fmt.Fprint(w, "Test page with timeout")
-}
-
-func waitStartingPool() {
-	time.Sleep(time.Duration(1) * time.Millisecond)
 }
 
 // func TestClosedInputTaskChanByTimeout(t *testing.T) {
@@ -45,136 +42,121 @@ func waitStartingPool() {
 
 func TestNoServer(t *testing.T) {
 	p := New(numWorkers)
-	waitStartingPool()
+	if !p.running {
+		t.Errorf("pool is %v, want %v", p.running, true)
+	}
+	if !p.IsRunning() {
+		t.Errorf("pool is %v, want %v", p.IsRunning(), true)
+	}
+	if p.numWorkers != numWorkers {
+		t.Errorf("pool have %v numWorkers, want %v", p.numWorkers, numWorkers)
+	}
 	if len(p.workers) != int(numWorkers) {
-		t.Errorf("Got %v Workers, want %v", len(p.workers), numWorkers)
+		t.Errorf("pool have %v Workers, want %v", len(p.workers), numWorkers)
 	}
 	err := p.Add("", "")
 	if err != errEmptyTarget {
 		t.Errorf("Got %v error, want %v", err, errEmptyTarget)
 	}
-	// if !p.poolIsRunning() {
-	// 	t.Errorf("Got %v error, want true", p.poolIsRunning())
-	// }
+	if p.addedTasks != 0 {
+		t.Errorf("Wrong input jobs. got %v, want %v", p.addedTasks, 0)
+	}
 	err = p.Add(":", "")
 	if err != nil {
 		t.Errorf("Got %v error, want %v", err, nil)
 	}
-	// task := <-p.ResultChan
-	// if task.Error == nil {
-	// 	t.Error("Got nil error, want net error")
-	// }
 	err = p.Add("http://127.0.0.1:80/", ":")
 	if err != nil {
 		t.Errorf("Got %v error, want %v", err, nil)
 	}
-	// task = <-p.ResultChan
-	// if task.Error == nil {
-	// 	t.Error("Got nil error, want net error")
-	// }
 	err = p.Add("http://127.0.0.1:80/", "")
 	if err != nil {
 		t.Errorf("Got %v error, want %v", err, nil)
 	}
-	// task = <-p.ResultChan
-	// if task.Error == nil {
-	// 	t.Error("Got nil error, want net error")
-	// }
-	// if p.GetAddedTasks() != 3 {
-	// 	t.Errorf("Wrong input jobs. Want 1, got %v", p.GetAddedTasks())
-	// }
-	// if p.getFreeWorkers() != numWorkers {
-	// 	t.Errorf("Wrong free workers. Want %v, got %v", numWorkers, p.getFreeWorkers())
-	// }
-	// err = p.Add("http://127.0.0.1:80/", "http://127.0.0.1:80/")
-	// if err != nil {
-	// 	t.Errorf("Got %v error, want nil error", err)
-	// }
-	// task = <-p.ResultChan
-	// if task.Error == nil {
-	// 	t.Error("Got nil error, want net error")
-	// }
+	if p.addedTasks != 3 {
+		t.Errorf("Wrong input jobs. got %v, want %v", p.addedTasks, 3)
+	}
 	p.Stop()
-	// if p.poolIsRunning() {
-	// 	t.Errorf("Got %v error, want false", p.poolIsRunning())
-	// }
+	if p.IsRunning() {
+		t.Errorf("pool is %v, want %v", p.IsRunning(), false)
+	}
+	err = p.Add("http://127.0.0.1:80/", "")
+	if err != errNotRun {
+		t.Errorf("Got %v error, want %v", err, errNotRun)
+	}
 }
 
-// func TestWithServer(t *testing.T) {
-// 	ts := httptest.NewServer(http.HandlerFunc(testHandler))
-// 	defer ts.Close()
+func TestWithServer(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
 
-// 	p := New(numWorkers)
-// 	_ = p.Add(ts.URL, "")
-// 	task, ok := <-p.ResultChan
-// 	if !ok {
-// 		t.Error("Channel is closed'")
-// 	}
-// 	if string(task.Body) != "Test page" {
-// 		t.Errorf("Got %v error, want 'Test page'", string(task.Body))
-// 	}
-// 	p.EndWaitingTasks()
-// 	err := p.Add(ts.URL, "")
-// 	if err != errNotWait {
-// 		t.Errorf("Got %v error, want %v", err, errNotWait)
-// 	}
-// 	if p.GetCompletedTasks() == 0 {
-// 		t.Errorf("Got %v error, want %v", 0, 1)
-// 	}
-// 	if !p.isCompleteJobs() {
-// 		t.Errorf("Got %v error, want %v", false, true)
-// 	}
-// }
+	p := New(numWorkers)
+	err := p.Add(ts.URL, "")
+	if err != nil {
+		t.Errorf("Got %v with adding task, want %v", err, nil)
+	}
+	p.taskWG.Wait()
+	if p.completedTasks != p.addedTasks {
+		t.Errorf("Got %v completed tasks, want %v", p.completedTasks, p.addedTasks)
+	}
+	task, ok := p.Get()
+	if !ok {
+		t.Errorf("Got %v with getting task, want %v", ok, true)
+	}
+	if string(task.Body) != "Test page" {
+		t.Errorf("Got %v in task.Body, want '%v'", string(task.Body), "Test page")
+	}
+	if p.completedTasks != 1 {
+		t.Errorf("Got %v completed tasks, want %v", p.completedTasks, 1)
+	}
+	err = p.Add(ts.URL, "")
+	if err != nil {
+		t.Errorf("Got %v with adding task, want %v", err, nil)
+	}
+	p.Wait()
+	_, ok = p.Get()
+	if !ok {
+		t.Errorf("Got %v with getting task, want %v", ok, true)
+	}
+	if p.completedTasks != 2 {
+		t.Errorf("Got %v error, want %v", p.completedTasks, 2)
+	}
+	p.Stop()
+}
 
-// func TestWithTimeout(t *testing.T) {
-// 	ts := httptest.NewServer(http.HandlerFunc(testHandlerWithTimeout))
-// 	defer ts.Close()
+func TestWithTimeout(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandlerWithTimeout))
+	defer ts.Close()
 
-// 	p := New(1)
-// 	p.SetTimeout(100)
-// 	err := p.Add(ts.URL, "")
-// 	if err != nil {
-// 		t.Errorf("Got %v error, want %v", err, nil)
-// 	}
-// 	task, ok := <-p.ResultChan
-// 	if !ok {
-// 		t.Error("Channel is closed'")
-// 	}
-// 	if string(task.Body) != "Test page with timeout" {
-// 		t.Errorf("Got %v error, want 'Test page with timeout'", string(task.Body))
-// 	}
-// 	p.timeout = time.Duration(1) * time.Millisecond
-// 	err = p.Add(ts.URL, "")
-// 	if err != nil {
-// 		t.Errorf("Got %v error, want %v", err, nil)
-// 	}
-// 	task, ok = <-p.ResultChan
-// 	if !ok {
-// 		t.Error("Channel is closed'")
-// 	}
-// 	if task.Error == nil {
-// 		t.Errorf("Got no error, want %v", task.Error)
-// 	}
-// 	_ = p.Add(ts.URL, "")
-// 	p.Quit()
-// 	if p.GetCompletedTasks() != 2 {
-// 		t.Errorf("Got %v error, want %v", p.GetCompletedTasks(), 2)
-// 	}
-// 	task, ok = <-p.ResultChan
-// 	if ok {
-// 		t.Errorf("Got %v error, want %v", ok, false)
-// 	}
-// 	if task != nil {
-// 		t.Errorf("Got %v error, want %v", task, nil)
-// 	}
-// 	if p.poolIsRunning() {
-// 		t.Errorf("Got %v error, want %v", !p.poolIsRunning(), false)
-// 	}
-// 	err = p.Add(ts.URL, "")
-// 	if err != errNotRun {
-// 		t.Errorf("Got %v error, want %v", err, errNotRun)
-// 	}
-// }
+	p := New(numWorkers)
+	p.NetTimeout(100)
+	if timeout != 100 {
+		t.Errorf("Got %v net timeout, want %v", timeout, 100)
+	}
+	_ = p.Add(ts.URL, "")
+	p.Wait()
+	task, ok := p.Get()
+	if !ok {
+		t.Errorf("Got %v with getting task, want %v", ok, true)
+	}
+	if string(task.Body) != "Test page with timeout" {
+		t.Errorf("Got %v error, want '%v'", string(task.Body), "Test page with timeout")
+	}
+	p.NetTimeout(5)
+	if timeout != 5 {
+		t.Errorf("Got %v net timeout, want %v", timeout, 5)
+	}
+	_ = p.Add(ts.URL, "")
+	p.Wait()
+	task, _ = p.Get()
+	if task.Error == nil {
+		t.Errorf("Got no error, want %v", task.Error)
+	}
+	if p.completedTasks != 2 {
+		t.Errorf("Got %v error, want %v", p.completedTasks, 2)
+	}
+	p.Stop()
+}
 
 // func TestQuitTimeout(t *testing.T) {
 // 	ts := httptest.NewServer(http.HandlerFunc(testHandlerWithTimeout))
@@ -205,49 +187,63 @@ func TestNoServer(t *testing.T) {
 // 	}
 // }
 
-// func BenchmarkAccumulate(b *testing.B) {
-// 	ts := httptest.NewServer(http.HandlerFunc(testHandler))
-// 	defer ts.Close()
-// 	b.ResetTimer()
+func BenchmarkAccumulate(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
+	// b.ResetTimer()
 
-// 	p := New(numWorkers)
-// 	n := b.N
-// 	for i := 0; i < n; i++ {
-// 		err := p.Add(ts.URL, "")
-// 		if err != nil {
-// 			b.Errorf("Got %v error, want %v", err, nil)
-// 		}
-// 	}
-// 	for i := 0; i < n; i++ {
-// 		task := <-p.ResultChan
-// 		err := task.Error
-// 		if err != nil {
-// 			b.Error("Error", err)
-// 		}
-// 	}
-// }
+	p := New(numWorkers)
+	n := b.N
+	for i := 0; i < n; i++ {
+		err := p.Add(ts.URL, "")
+		if err != nil {
+			b.Errorf("Got %v error, want %v", err, nil)
+		}
+	}
+}
 
-// func BenchmarkParallel(b *testing.B) {
-// 	ts := httptest.NewServer(http.HandlerFunc(testHandler))
-// 	defer ts.Close()
-// 	b.ResetTimer()
+func BenchmarkFullProcess(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
+	// b.ResetTimer()
 
-// 	p := New(numWorkers)
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			err := p.Add(ts.URL, "")
-// 			if err != nil {
-// 				b.Errorf("Got %v error, want %v", err, nil)
-// 			}
-// 		}
-// 	})
-// 	b.RunParallel(func(pb *testing.PB) {
-// 		for pb.Next() {
-// 			task := <-p.ResultChan
-// 			_ = task.Error
-// 			// if err != nil {
-// 			// 	b.Error("Error", err)
-// 			// }
-// 		}
-// 	})
-// }
+	p := New(numWorkers)
+	n := b.N
+	for i := 0; i < n; i++ {
+		err := p.Add(ts.URL, "")
+		if err != nil {
+			b.Errorf("Got %v error, want %v", err, nil)
+		}
+	}
+	// p.Wait()
+	for i := 0; i < n; i++ {
+		_, _ = p.Get()
+		// if !ok {
+		// 	b.Errorf("Got %v with getting task, want %v", ok, true)
+		// }
+		// if task.Error != nil {
+		// 	b.Errorf("Task %v have error %v", task.ID, task.Error)
+		// }
+	}
+}
+
+func BenchmarkParallel(b *testing.B) {
+	ts := httptest.NewServer(http.HandlerFunc(testHandler))
+	defer ts.Close()
+	// b.ResetTimer()
+
+	p := New(numWorkers)
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			err := p.Add(ts.URL, "")
+			if err != nil {
+				b.Errorf("Got %v error, want %v", err, nil)
+			}
+		}
+	})
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			_, _ = p.Get()
+		}
+	})
+}

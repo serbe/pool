@@ -1,7 +1,7 @@
 package pool
 
 import (
-	"log"
+	"sync"
 	"time"
 )
 
@@ -9,14 +9,18 @@ var timeout int64
 
 // Pool - specification of golang pool
 type Pool struct {
-	running    bool
-	addedTasks int64
-	in         ringQueue
-	out        ringQueue
-	toWork     chan Task
-	fromWork   chan Task
-	quit       chan struct{}
-	workers    []worker
+	running        bool
+	numWorkers     int64
+	addedTasks     int64
+	completedTasks int64
+	in             ringQueue
+	out            ringQueue
+	toWork         chan Task
+	fromWork       chan Task
+	quit           chan struct{}
+	workers        []worker
+	wg             sync.WaitGroup
+	taskWG         sync.WaitGroup
 	// numWorkers     int64
 	// useQuitTimeout bool
 	// waitingTasks   uint32
@@ -31,47 +35,45 @@ type Pool struct {
 // New - create new goroutine pool with channels
 // numWorkers - max workers
 func New(numWorkers int64) *Pool {
+	p := &Pool{
+		numWorkers: numWorkers,
+		in:         newRingQueue(),
+		out:        newRingQueue(),
+		toWork:     make(chan Task, numWorkers),
+		fromWork:   make(chan Task, numWorkers),
+		quit:       make(chan struct{}),
+	}
+	p.wg.Add(1)
+	p.startWorkers()
+	go p.start()
+	p.wg.Wait()
+	return p
+}
+
+func (p *Pool) startWorkers() {
 	var (
 		i       int64
 		workers []worker
 	)
-	p := &Pool{
-		in:       newRingQueue(),
-		out:      newRingQueue(),
-		toWork:   make(chan Task, numWorkers),
-		fromWork: make(chan Task, numWorkers),
-		quit:     make(chan struct{}),
-	}
-	for i < numWorkers {
+	for i < p.numWorkers {
+		p.wg.Add(1)
 		worker := worker{
 			id:   i,
 			in:   p.toWork,
 			out:  p.fromWork,
 			quit: make(chan struct{}),
+			wg:   &p.wg,
 		}
 		go worker.start()
 		workers = append(workers, worker)
 		i++
 	}
 	p.workers = workers
-	go p.start()
-	// p.freeWorkers = numWorkers
-	// p.workChan = make(chan Task)
-	// p.inputTaskChan = make(chan Task, 1)
-	// p.ResultChan = make(chan Task, 1)
-	// p.endTaskChan = make(chan struct{}, 1)
-	// p.quit = make(chan struct{}, 1)
-	// p.queue = newRingQueue()
-	// p.timeout = time.Duration(10) * time.Second
-	// go p.runBroker()
-	// // go p.runWorkers()
-	// p.runningPool = 1
-	// p.waitingTasks = 1
-	return p
 }
 
 func (p *Pool) start() {
 	p.running = true
+	p.wg.Done()
 	tick := time.Tick(time.Duration(200) * time.Microsecond)
 	for {
 		select {
@@ -81,33 +83,18 @@ func (p *Pool) start() {
 				p.toWork <- task
 			}
 		case task := <-p.fromWork:
-			log.Println("pool get task", task.ID)
 			p.out.put(task)
+			p.completedTasks++
+			p.taskWG.Done()
 		case <-p.quit:
 			for i := range p.workers {
-				p.workers[i].quit <- struct{}{}
+				p.wg.Add(1)
+				p.workers[i].stop()
 			}
-			close(p.quit)
-			p.running = false
+			// close(p.quit)
 			break
 		}
 	}
-	// for {
-	// 	select {
-	// 	case task := <-p.inputTaskChan:
-	// 		task.ID = p.GetAddedTasks()
-	// 		p.addTask(task)
-	// 	case <-p.endTaskChan:
-	// 		// p.incWorkers()
-	// 		p.tryGetTask()
-	// 	case <-p.quit:
-	// 		atomic.StoreUint32(&p.runningPool, 0)
-	// 		p.EndWaitingTasks()
-	// 		close(p.workChan)
-	// 		close(p.ResultChan)
-	// 		break
-	// 	}
-	// }
 }
 
 // Add - adding task to pool
@@ -115,17 +102,17 @@ func (p *Pool) Add(hostname string, proxy string) error {
 	if hostname == "" {
 		return errEmptyTarget
 	}
-	// if !p.poolIsRunning() {
-	// 	return errNotRun
-	// }
-	// if !p.poolIsWaitingTasks() {
-	// 	return errNotWait
-	// }
+	if !p.running {
+		return errNotRun
+	}
 	task := Task{
+		ID:       p.addedTasks,
 		Hostname: hostname,
 		Proxy:    proxy,
 	}
+	p.addedTasks++
 	p.in.put(task)
+	p.taskWG.Add(1)
 	return nil
 }
 
@@ -137,16 +124,24 @@ func (p *Pool) Get() (Task, bool) {
 // Stop - stop pool and all workers
 func (p *Pool) Stop() {
 	p.quit <- struct{}{}
+	p.wg.Wait()
+	p.running = false
 }
 
-// func (p *Pool) poolIsRunning() bool {
-// 	return atomic.LoadUint32(&p.runningPool) != 0
-// }
+// NetTimeout - set crawl timeout in milliseconds
+func (p *Pool) NetTimeout(millis int64) {
+	timeout = millis
+}
 
-// // EndWaitingTasks - stop pool waiting tasks
-// func (p *Pool) EndWaitingTasks() {
-// 	atomic.StoreUint32(&p.waitingTasks, 0)
-// }
+// IsRunning - check pool status is running
+func (p *Pool) IsRunning() bool {
+	return p.running
+}
+
+// Wait - wait all task is done
+func (p *Pool) Wait() {
+	p.taskWG.Wait()
+}
 
 // func (p *Pool) poolIsWaitingTasks() bool {
 // 	return atomic.LoadUint32(&p.waitingTasks) == 1
