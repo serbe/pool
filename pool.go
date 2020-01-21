@@ -1,6 +1,7 @@
 package pool
 
 import (
+	"math/rand"
 	"sync"
 	"time"
 )
@@ -35,6 +36,7 @@ type Pool struct {
 // New - create new goroutine pool with channels
 // numWorkers - max workers
 func New(numWorkers int64) *Pool {
+	rand.Seed(time.Now().UnixNano())
 	p := &Pool{
 		numWorkers: numWorkers,
 		in:         newRingQueue(),
