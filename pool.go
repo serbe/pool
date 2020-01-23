@@ -2,7 +2,9 @@ package pool
 
 import (
 	"errors"
+	"log"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -76,8 +78,11 @@ func (p *Pool) start() {
 	p.running = true
 	p.wg.Done()
 	tick := time.Tick(time.Duration(200) * time.Microsecond)
+	ticker := time.NewTicker(time.Duration(timeout*3) * time.Millisecond)
 	for {
 		select {
+		case <-ticker.C:
+			log.Println("Pool is sleep")
 		case <-tick:
 			task, ok := p.in.get()
 			if ok {
@@ -89,7 +94,8 @@ func (p *Pool) start() {
 			} else {
 				p.outTasks <- task
 			}
-			p.completedTasks++
+			p.incCompleted()
+			ticker = time.NewTicker(time.Duration(timeout*3) * time.Millisecond)
 			p.taskWG.Done()
 		case <-p.quit:
 			for i := range p.workers {
@@ -115,7 +121,7 @@ func (p *Pool) Add(hostname string, proxy string) error {
 		Hostname: hostname,
 		Proxy:    proxy,
 	}
-	p.addedTasks++
+	p.incAdded()
 	p.in.put(task)
 	p.taskWG.Add(1)
 	return nil
@@ -148,14 +154,22 @@ func (p *Pool) Wait() {
 	p.taskWG.Wait()
 }
 
+func (p *Pool) incAdded() {
+	atomic.AddInt64(&p.addedTasks, 1)
+}
+
 // Added - number of adding tasks
 func (p *Pool) Added() int64 {
-	return p.addedTasks
+	return atomic.LoadInt64(&p.addedTasks)
+}
+
+func (p *Pool) incCompleted() {
+	atomic.AddInt64(&p.completedTasks, 1)
 }
 
 // Completed - number of completed tasks
 func (p *Pool) Completed() int64 {
-	return p.completedTasks
+	return atomic.LoadInt64(&p.completedTasks)
 }
 
 // UseOutChan - use chan to get results
