@@ -9,10 +9,10 @@ import (
 )
 
 var (
-	timeout        int64
-	errEmptyTarget = errors.New("error: empty target hostname")
-	errNotRun      = errors.New("error: pool is not running")
-	errNotWait     = errors.New("error: pool is not waiting tasks")
+	timeout        int64 = 10000
+	errEmptyTarget       = errors.New("error: empty target hostname")
+	errNotRun            = errors.New("error: pool is not running")
+	errNotWait           = errors.New("error: pool is not waiting tasks")
 )
 
 // Pool - specification of golang pool
